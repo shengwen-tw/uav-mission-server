@@ -8,7 +8,8 @@ CFLAGS+=-I./
 
 SRC=main.c \
 	serial.c \
-	mavlink_parser.c
+	mavlink_parser.c \
+	mavlink_publisher.c
 
 all: $(SRC)
 	gcc $(CFLAGS) -o uart-server $^
