@@ -1,12 +1,14 @@
 CFLAGS=
 
-CFLAGS+=-Wall
+CFLAGS+=-Wall -Wno-address-of-packed-member
 
 CFLAGS+=-I./lib/mavlink
 CFLAGS+=-I./lib/mavlink/common
+CFLAGS+=-I./
 
 SRC=main.c \
-	serial.c 
+	serial.c \
+	mavlink_parser.c
 
 all: $(SRC)
 	gcc $(CFLAGS) -o uart-server $^
