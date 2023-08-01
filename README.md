@@ -26,3 +26,10 @@ $ ./uart-server serial_port config_str [tcp_port]
     data bits you can simply pass `19200,,7` as the configuration string.
 
 * TCP Port -- The TCP to accept connections on (optional, the default is 8278).
+
+## MAVLink C Code Generation
+
+```
+git clone https://github.com/ArduPilot/pymavlink.git
+python3 ./pymavlink/tools/mavgen.py --lang=C --wire-protocol=2.0 --output=generated/include/mavlink/v2.0 message_definitions/common.xml
+```
