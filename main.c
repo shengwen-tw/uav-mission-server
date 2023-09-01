@@ -12,6 +12,7 @@
 #include <string.h>
 #include <time.h>
 #include "mavlink.h"
+#include "mavlink_parser.h"
 #include "mavlink_publisher.h"
 #include "serial.h"
 #include "system.h"
@@ -81,6 +82,9 @@ struct ClientNode {
     Socket client; /* The client socket */
     struct ClientNode
         *next; /* Pointer to the next client node in the clients list */
+
+    /* MAVLink parser */
+    bool parse_me;
 };
 
 enum {
@@ -450,6 +454,7 @@ static int accept_client(Socket server)
     socklen_t remlen = sizeof(remote);
     struct ClientNode *new_client =
         (struct ClientNode *) malloc(sizeof(struct ClientNode));
+    new_client->parse_me = 0;  // TODO: identify the Gimbal device
 
     if (!new_client) {
         goto cleanup;
@@ -585,6 +590,23 @@ static void handle_commanding_client(SerialFd sport)
     }
 
     rbytes = recv(g_clients->client, (char *) g_cache, sizeof(g_cache), 0);
+
+    /* Parse MAVLink message for the gimbal device */
+    if (g_clients->parse_me) {
+        for (int i = 0; i < rbytes; i++) {
+            mavlink_status_t status;
+            mavlink_message_t recvd_msg;
+
+            if (mavlink_parse_char(MAVLINK_COMM_1, g_cache[i], &recvd_msg,
+                                   &status) == 1) {
+                parse_mavlink_msg(&recvd_msg);
+
+                /* Gimbal device only communicates with the server, the
+                 * received data has no need to pass to the flight controller */
+                return;
+            }
+        }
+    }
 
     if (rbytes <= 0) {
         if (tryout++ == 3) {
@@ -747,7 +769,7 @@ int run_uart_server(int argc, char const *argv[])
                             }
 
                             /* Send MAVLink tone command to the flight
-                             * control boardi via serial */
+                             * control board via serial */
                             mavlink_tx_cmd cmd;
                             if (mq_receive(mqd_mavlink_tx, (char *) &cmd,
                                            sizeof(cmd), 0) != -1) {
