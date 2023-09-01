@@ -1,5 +1,4 @@
 BasedOnStyle: Chromium
-Language: Cpp
 MaxEmptyLinesToKeep: 3
 IndentCaseLabels: false
 AllowShortIfStatementsOnASingleLine: false
