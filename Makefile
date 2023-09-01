@@ -1,21 +1,23 @@
-CFLAGS=
+CFLAGS :=
+CFLAGS += -O2 -Wall -Wno-address-of-packed-member
+CFLAGS += -I lib/mavlink
+CFLAGS += -I lib/mavlink/common
+CFLAGS += -I.
+CFLAGS += -D MASTER_PID_FILE="\"uart-server.pid\""
 
-CFLAGS+=-Wall -Wno-address-of-packed-member
+TARGET = uart-server
 
-CFLAGS+=-I./lib/mavlink
-CFLAGS+=-I./lib/mavlink/common
-CFLAGS+=-I./
-
-CFLAGS+=-D MASTER_PID_FILE="\"uart-server.pid\""
-
-SRC=main.c \
+SRCS := \
+	main.c \
 	serial.c \
 	system.c \
 	mavlink_parser.c \
 	mavlink_publisher.c
 
-all: $(SRC)
-	gcc $(CFLAGS) -o uart-server $^
+all: $(TARGET)
+
+$(TARGET): $(SRCS)
+	$(CC) $(CFLAGS) -o $@ $^
 
 clean:
-	rm -f uart-server
+	$(RM) $(TARGET)
