@@ -1,5 +1,9 @@
 CFLAGS :=
-CFLAGS += -O2 -Wall -Wno-address-of-packed-member
+CFLAGS += -O2 -Wall \
+	-Wno-address-of-packed-member \
+	-Wno-unused-result \
+	-Wno-array-bounds \
+	-Wno-stringop-overread
 CFLAGS += -I lib/mavlink
 CFLAGS += -I lib/mavlink/common
 CFLAGS += -I.
