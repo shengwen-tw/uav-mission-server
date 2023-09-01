@@ -28,6 +28,7 @@
 #include <netinet/in.h>
 #include <poll.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -443,7 +444,7 @@ static unsigned char g_cache[1024];
 static int g_last_id = -1, g_commanding_client = -1;
 static struct ClientNode *g_clients = NULL;
 static Waiter g_waiters[EVENT_INDEX_COUNT_MAX];
-mqd_t mqd_mavlink_tx;
+int cmd_fifo_tx, cmd_fifo_rx;
 
 /**
  * A utility function that handles client connections.
@@ -636,7 +637,7 @@ static void sig_handler(int sig)
 
     case PLAY_TONE_SIGNAL: {
         mavlink_tx_cmd cmd = PLAY_TONE_CMD;
-        mq_send(mqd_mavlink_tx, (char *) &cmd, sizeof(cmd), 0);
+        write(cmd_fifo_tx, &cmd, sizeof(cmd));
     } break;
 
     default:
@@ -771,8 +772,8 @@ int run_uart_server(int argc, char const *argv[])
                             /* Send MAVLink tone command to the flight
                              * control board via serial */
                             mavlink_tx_cmd cmd;
-                            if (mq_receive(mqd_mavlink_tx, (char *) &cmd,
-                                           sizeof(cmd), 0) != -1) {
+                            if (read(cmd_fifo_rx, &cmd, sizeof(cmd)) ==
+                                sizeof(cmd)) {
                                 mavlink_send_play_tune(serial);
                                 status(
                                     "Send play tone message from server to the "
@@ -825,15 +826,16 @@ static void send_signal(int signo)
     kill(pid, signo);
 }
 
-void create_mavlink_tx_mqueue(void)
+#define CMD_FIFO "cmd_fifo"
+void create_mavlink_msg_fifo(void)
 {
-    struct mq_attr attr = {.mq_flags = 0,
-                           .mq_maxmsg = 10,
-                           .mq_msgsize = sizeof(mavlink_tx_cmd),
-                           .mq_curmsgs = 0};
-    int flags = O_NONBLOCK | O_RDWR | O_CREAT;
-    int _mode = S_IRUSR | S_IWUSR;
-    mqd_mavlink_tx = mq_open("/mavlink_tx", flags, _mode, &attr);
+    mkfifo(CMD_FIFO, 0666);
+    cmd_fifo_tx = open(CMD_FIFO, O_RDWR);
+    cmd_fifo_rx = open(CMD_FIFO, O_RDWR | O_NONBLOCK);
+    if ((cmd_fifo_tx == -1) || (cmd_fifo_rx == -1)) {
+        perror("mkfifo");
+        exit(1);
+    }
 }
 
 int main(int argc, char const *argv[])
@@ -860,7 +862,7 @@ int main(int argc, char const *argv[])
         int mastr_pid = getpid();
         create_pidfile(mastr_pid);
 
-        create_mavlink_tx_mqueue();
+        create_mavlink_msg_fifo();
 
         /* start the service */
         ret_val = run_uart_server(argc, argv);
