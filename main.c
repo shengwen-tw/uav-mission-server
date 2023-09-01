@@ -808,6 +808,8 @@ int run_uart_server(int argc, char const *argv[])
                     /* Close both ends of shut down pipe */
                     close(g_close[0]);
                     close(g_close[1]);
+                    close(cmd_fifo_tx);
+                    close(cmd_fifo_rx);
 
                     serial_close(serial);
                 }
