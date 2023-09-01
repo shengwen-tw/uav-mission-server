@@ -3,6 +3,7 @@
  */
 
 #include <ctype.h>
+#include <mqueue.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -10,6 +11,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "mavlink.h"
+#include "mavlink_publisher.h"
 #include "serial.h"
 #include "system.h"
 
@@ -85,6 +88,10 @@ enum {
     TERMINATE_SIGNAL = SIGINT,
     PLAY_TONE_SIGNAL = SIGUSR1
 };
+
+enum { PLAY_TONE_CMD };
+
+typedef int mavlink_tx_cmd;
 
 /**
  * A utility function that parses a string as an unsigned integer.
@@ -432,6 +439,7 @@ static unsigned char g_cache[1024];
 static int g_last_id = -1, g_commanding_client = -1;
 static struct ClientNode *g_clients = NULL;
 static Waiter g_waiters[EVENT_INDEX_COUNT_MAX];
+mqd_t mqd_mavlink_tx;
 
 /**
  * A utility function that handles client connections.
@@ -605,7 +613,8 @@ static void sig_handler(int sig)
     } break;
 
     case PLAY_TONE_SIGNAL: {
-        // TODO
+        mavlink_tx_cmd cmd = PLAY_TONE_CMD;
+        mq_send(mqd_mavlink_tx, (char *) &cmd, sizeof(cmd), 0);
     } break;
 
     default:
@@ -680,6 +689,10 @@ int run_uart_server(int argc, char const *argv[])
                         signal(SIGABRT, sig_handler);
                         signal(SIGTERM, sig_handler);
 
+                        /* Register signal event for handling customized
+                         * commands */
+                        signal(PLAY_TONE_SIGNAL, sig_handler);
+
                         /* Workaround for running in mintty (doesn't really
                          * matter everywhere else because we don't print
                          * that much) */
@@ -733,6 +746,17 @@ int run_uart_server(int argc, char const *argv[])
                                 g_waiters[EVENT_SERIAL_INDEX].revents = 0;
                             }
 
+                            /* Send MAVLink tone command to the flight
+                             * control boardi via serial */
+                            mavlink_tx_cmd cmd;
+                            if (mq_receive(mqd_mavlink_tx, (char *) &cmd,
+                                           sizeof(cmd), 0) != -1) {
+                                mavlink_send_play_tune(serial);
+                                status(
+                                    "Send play tone message from server to the "
+                                    "flight controller");
+                            }
+
                             /* Check if we need to listen for a new
                              * commanding client */
                             if ((g_clients) &&
@@ -779,6 +803,17 @@ static void send_signal(int signo)
     kill(pid, signo);
 }
 
+void create_mavlink_tx_mqueue(void)
+{
+    struct mq_attr attr = {.mq_flags = 0,
+                           .mq_maxmsg = 10,
+                           .mq_msgsize = sizeof(mavlink_tx_cmd),
+                           .mq_curmsgs = 0};
+    int flags = O_NONBLOCK | O_RDWR | O_CREAT;
+    int _mode = S_IRUSR | S_IWUSR;
+    mqd_mavlink_tx = mq_open("/mavlink_tx", flags, _mode, &attr);
+}
+
 int main(int argc, char const *argv[])
 {
     int ret_val = EXIT_FAILURE;
@@ -802,6 +837,8 @@ int main(int argc, char const *argv[])
         /* create pid file */
         int mastr_pid = getpid();
         create_pidfile(mastr_pid);
+
+        create_mavlink_tx_mqueue();
 
         /* start the service */
         ret_val = run_uart_server(argc, argv);
