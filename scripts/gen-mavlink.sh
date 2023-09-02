@@ -28,7 +28,10 @@ function gen_mavlink
             --output=generated/include/mavlink/v2.0 \
             message_definitions/v1.0/common.xml
     popd
+    mkdir -p lib/mavlink/
     cp -r /tmp/mavlink/generated/include/mavlink/v2.0/* lib/mavlink/
 }
 
-gen_mavlink && OK
+if [ ! -d "lib/mavlink" ]; then
+    gen_mavlink && OK
+fi

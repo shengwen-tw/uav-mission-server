@@ -21,6 +21,7 @@ SRCS := \
 all: $(TARGET)
 
 $(TARGET): $(SRCS)
+	./scripts/gen-mavlink.sh
 	$(CC) $(CFLAGS) -o $@ $^
 
 clean:
