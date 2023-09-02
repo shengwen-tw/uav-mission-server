@@ -3,6 +3,17 @@
 A simple program that serves a serial port over TCP to multiple clients. The first connected
 client (in a FIFO fashion) can also send data to the serial port.
 
+## Prerequisites
+
+```
+sudo apt-get install python3-lxml
+```
+## Build
+
+```
+make all
+```
+
 ## Usage
 
 ```shell
@@ -26,15 +37,3 @@ $ ./uart-server serial_port config_str [tcp_port]
     data bits you can simply pass `19200,,7` as the configuration string.
 
 * TCP Port -- The TCP to accept connections on (optional, the default is 8278).
-
-## MAVLink C Code Generation
-
-```
-sudo apt-get install python3-lxml
-git clone https://github.com/mavlink/mavlink.git --recursive
-cd mavlink/
-python3 ./pymavlink/tools/mavgen.py \
-        --lang=C --wire-protocol=2.0 \
-        --output=generated/include/mavlink/v2.0 \
-        message_definitions/v1.0/common.xml
-```
