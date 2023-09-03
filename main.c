@@ -3,7 +3,6 @@
  */
 
 #include <ctype.h>
-#include <mqueue.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdint.h>
