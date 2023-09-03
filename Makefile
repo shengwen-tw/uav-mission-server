@@ -1,9 +1,22 @@
-CFLAGS :=
-CFLAGS += -O2 -Wall \
-	-Wno-address-of-packed-member \
-	-Wno-unused-result \
-	-Wno-array-bounds \
-	-Wno-stringop-overread
+UNAME := $(shell uname)
+
+ifeq ($(UNAME), Linux)
+  # Linux (gcc)
+  CFLAGS :=
+  CFLAGS += -Wno-address-of-packed-member \
+            -Wno-unused-result \
+            -Wno-array-bounds \
+            -Wno-stringop-overread
+else ifeq ($(UNAME), Darwin)
+  # macOS (clang)
+  CFLAGS :=
+else ifeq ($(UNAME), FreeBSD)
+  # FreeBSD (clang)
+  CFLAGS :=
+endif
+
+CFLAGS += -O2 -Wall
+
 CFLAGS += -I lib/mavlink
 CFLAGS += -I lib/mavlink/common
 CFLAGS += -I.
