@@ -21,10 +21,9 @@ function gen_mavlink
 {
     rm -rf /tmp/mavlink
     pushd /tmp/
-    ASSERT git clone https://github.com/mavlink/mavlink.git --recursive
+    ASSERT git clone https://github.com/mavlink/mavlink --recursive
     cd mavlink/
-    pip3 install future
-    python3 ./pymavlink/tools/mavgen.py \
+    python3 pymavlink/tools/mavgen.py \
             --lang=C --wire-protocol=2.0 \
             --output=generated/include/mavlink/v2.0 \
             message_definitions/v1.0/common.xml

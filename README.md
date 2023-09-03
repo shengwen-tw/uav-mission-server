@@ -5,7 +5,12 @@ client (in a FIFO fashion) can also send data to the serial port.
 
 ## Build
 
+[future](https://pypi.org/project/future/) is required to generate MAVLink headers.
+```shell
+pip3 install future
 ```
+
+```shell
 make all
 ```
 
