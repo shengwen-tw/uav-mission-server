@@ -3,11 +3,6 @@
 A simple program that serves a serial port over TCP to multiple clients. The first connected
 client (in a FIFO fashion) can also send data to the serial port.
 
-## Prerequisites
-
-```
-sudo apt-get install python3-lxml
-```
 ## Build
 
 ```

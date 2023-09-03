@@ -23,6 +23,7 @@ function gen_mavlink
     pushd /tmp/
     ASSERT git clone https://github.com/mavlink/mavlink.git --recursive
     cd mavlink/
+    pip3 install future
     python3 ./pymavlink/tools/mavgen.py \
             --lang=C --wire-protocol=2.0 \
             --output=generated/include/mavlink/v2.0 \
