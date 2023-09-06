@@ -15,11 +15,15 @@ void mavlink_send_play_tune(SerialFd sport)
     uint8_t component_id = 191;
     uint8_t target_system = 0;
     uint8_t target_component = 0;
-    uint8_t format = 1;
-    const char *tune = "T200 L16 O5 A C O6 E O5 A C O6 E O5 A C O6 E";
+
+    /* check:
+     * https://github.com/PX4/PX4-Autopilot/blob/main/src/lib/tunes/tune_definition.desc#L89C44-L89C90
+     */
+    const char *tune = "MFT240L8 O4aO5dc O4aO5dc O4aO5dc L16dcdcdcdc";
+    const char *tune2 = "";
 
     mavlink_message_t msg;
-    mavlink_msg_play_tune_v2_pack(sys_id, component_id, &msg, target_system,
-                                  target_component, format, tune);
+    mavlink_msg_play_tune_pack(sys_id, component_id, &msg, target_system,
+                               target_component, tune, tune2);
     mavlink_send_msg(&msg, sport);
 }
