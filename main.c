@@ -451,11 +451,12 @@ static int accept_client(Socket server)
     socklen_t remlen = sizeof(remote);
     struct ClientNode *new_client =
         (struct ClientNode *) malloc(sizeof(struct ClientNode));
-    new_client->parse_me = 0;  // TODO: identify the Gimbal device
 
     if (!new_client) {
         goto cleanup;
     }
+
+    new_client->parse_me = 0;  // TODO: identify the Gimbal device
 
     memset(new_client, 0, sizeof(*new_client));
 
