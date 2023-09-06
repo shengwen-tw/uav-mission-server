@@ -651,7 +651,7 @@ int run_uart_server(int argc, char const *argv[])
     else if ((argc == 4) &&
              ((!get_unsigned(argv[ARGS_TCP_PORT], strlen(argv[ARGS_TCP_PORT]),
                              &port) ||
-               (port <= 0) || (port > 0xffff)))) {
+               (port == 0) || (port > 0xffff)))) {
         help("port must be in the range 1-65535");
     } else {
         Socket server;
