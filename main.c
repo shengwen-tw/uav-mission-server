@@ -87,12 +87,6 @@ struct ClientNode {
     bool parse_me;
 };
 
-enum {
-    SHUTDOWN_SIGNAL = SIGQUIT,
-    TERMINATE_SIGNAL = SIGINT,
-    PLAY_TONE_SIGNAL = SIGUSR1
-};
-
 enum { PLAY_TUNE_CMD };
 
 typedef struct {
@@ -446,7 +440,7 @@ static unsigned char g_cache[1024];
 static int g_last_id = -1, g_commanding_client = -1;
 static struct ClientNode *g_clients = NULL;
 static Waiter g_waiters[EVENT_INDEX_COUNT_MAX];
-int cmd_fifo_tx, cmd_fifo_rx;
+int cmd_fifo_w, cmd_fifo_r;
 
 /**
  * A utility function that handles client connections.
@@ -636,12 +630,6 @@ static void sig_handler(int sig)
         write(g_close[1], &b, 1);
         delete_pidfile();
     } break;
-
-    case PLAY_TONE_SIGNAL: {
-        mavlink_cmd cmd = {.type = PLAY_TUNE_CMD};
-        write(cmd_fifo_tx, &cmd, sizeof(cmd));
-    } break;
-
     default:
         break;
     }
@@ -714,10 +702,6 @@ int run_uart_server(int argc, char const *argv[])
                         signal(SIGABRT, sig_handler);
                         signal(SIGTERM, sig_handler);
 
-                        /* Register signal event for handling customized
-                         * commands */
-                        signal(PLAY_TONE_SIGNAL, sig_handler);
-
                         /* Workaround for running in mintty (doesn't really
                          * matter everywhere else because we don't print
                          * that much) */
@@ -774,11 +758,11 @@ int run_uart_server(int argc, char const *argv[])
                             /* Send MAVLink tone command to the flight
                              * control board via serial */
                             mavlink_cmd cmd;
-                            if (read(cmd_fifo_rx, &cmd, sizeof(cmd)) ==
-                                sizeof(cmd)) {
+                            int retval = read(cmd_fifo_r, &cmd, sizeof(cmd));
+                            if (retval == sizeof(cmd)) {
                                 switch (cmd.type) {
                                 case PLAY_TUNE_CMD:
-                                    mavlink_send_play_tune(0, serial);
+                                    mavlink_send_play_tune(cmd.arg[0], serial);
                                     status(
                                         "Send play tone message from server to "
                                         "the "
@@ -815,8 +799,8 @@ int run_uart_server(int argc, char const *argv[])
                     /* Close both ends of shut down pipe */
                     close(g_close[0]);
                     close(g_close[1]);
-                    close(cmd_fifo_tx);
-                    close(cmd_fifo_rx);
+                    close(cmd_fifo_w);
+                    close(cmd_fifo_r);
 
                     serial_close(serial);
                 }
@@ -829,24 +813,13 @@ int run_uart_server(int argc, char const *argv[])
     return ret_val;
 }
 
-static void send_signal(int signo)
+void send_signal(int signo)
 {
     int pid = read_pidfile();
     kill(pid, signo);
 }
 
 #define CMD_FIFO "cmd_fifo"
-void create_mavlink_msg_fifo(void)
-{
-    mkfifo(CMD_FIFO, 0666);
-    cmd_fifo_tx = open(CMD_FIFO, O_RDWR);
-    cmd_fifo_rx = open(CMD_FIFO, O_RDWR | O_NONBLOCK);
-    if ((cmd_fifo_tx == -1) || (cmd_fifo_rx == -1)) {
-        perror("mkfifo");
-        exit(1);
-    }
-}
-
 int main(int argc, char const *argv[])
 {
     int ret_val = EXIT_FAILURE;
@@ -856,22 +829,43 @@ int main(int argc, char const *argv[])
             help(NULL);
             return 0;
         }
-
-        if (strcmp(argv[1], "tone") == 0) {
-            send_signal(PLAY_TONE_SIGNAL);
-            printf("request tone playing to the server.\n");
-            return 0;
-        }
     } else if (argc < 3) {
         help("Too few arguments");
     } else if (argc > 4) {
         help("Too many arguments");
     } else {
+        /* commander */
+        if (strcmp(argv[1], "tune") == 0) {
+            /* open the command fifo */
+            cmd_fifo_w = open(CMD_FIFO, O_RDWR);
+            if (cmd_fifo_w == -1) {
+                printf("Server is not running.\n\r");
+                exit(1);
+            }
+
+            /* ask the server to play the tune sequence */
+            mavlink_cmd cmd;
+            cmd.type = PLAY_TUNE_CMD;
+            cmd.arg[0] = atoi(argv[2]);
+            write(cmd_fifo_w, &cmd, sizeof(cmd));
+
+            printf("Send tune playing request (%d).\n", cmd.arg[0]);
+            return 0;
+        }
+
+        /* server */
+
         /* create pid file */
         int mastr_pid = getpid();
         create_pidfile(mastr_pid);
 
-        create_mavlink_msg_fifo();
+        /* create command fifo */
+        mkfifo(CMD_FIFO, 0666);
+        cmd_fifo_r = open(CMD_FIFO, O_RDWR | O_NONBLOCK);
+        if (cmd_fifo_r == -1) {
+            perror("mkfifo");
+            exit(1);
+        }
 
         /* start the service */
         ret_val = run_uart_server(argc, argv);
