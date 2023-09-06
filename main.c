@@ -94,6 +94,9 @@ typedef struct {
     int arg[4];  // In case the action require some parameters
 } mavlink_cmd;
 
+mavlink_status_t mavlink_status;
+mavlink_message_t recvd_msg;
+
 /**
  * A utility function that parses a string as an unsigned integer.
  *
@@ -592,11 +595,8 @@ static void handle_commanding_client(SerialFd sport)
     /* Parse MAVLink message for the gimbal device */
     if (g_clients->parse_me) {
         for (int i = 0; i < rbytes; i++) {
-            mavlink_status_t status;
-            mavlink_message_t recvd_msg;
-
             if (mavlink_parse_char(MAVLINK_COMM_1, g_cache[i], &recvd_msg,
-                                   &status) == 1) {
+                                   &mavlink_status) == 1) {
                 parse_mavlink_msg(&recvd_msg);
 
                 /* Gimbal device only communicates with the server, the

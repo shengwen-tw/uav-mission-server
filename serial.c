@@ -162,7 +162,7 @@ SerialFd serial_open(const char *port_s,
     int br = convert_baudrate(cfg->baudrate);
 
     if (br == B0) {
-        fprintf(stderr, "baudrate %d is not supported\n", cfg->baudrate);
+        fprintf(stderr, "baudrate %u is not supported\n", cfg->baudrate);
         return SERIAL_INVALID_FD;
     }
 
