@@ -93,9 +93,12 @@ enum {
     PLAY_TONE_SIGNAL = SIGUSR1
 };
 
-enum { PLAY_TONE_CMD };
+enum { PLAY_TUNE_CMD };
 
-typedef int mavlink_tx_cmd;
+typedef struct {
+    int type;    // Command type
+    int arg[4];  // In case the action require some parameters
+} mavlink_cmd;
 
 /**
  * A utility function that parses a string as an unsigned integer.
@@ -635,7 +638,7 @@ static void sig_handler(int sig)
     } break;
 
     case PLAY_TONE_SIGNAL: {
-        mavlink_tx_cmd cmd = PLAY_TONE_CMD;
+        mavlink_cmd cmd = {.type = PLAY_TUNE_CMD};
         write(cmd_fifo_tx, &cmd, sizeof(cmd));
     } break;
 
@@ -770,13 +773,18 @@ int run_uart_server(int argc, char const *argv[])
 
                             /* Send MAVLink tone command to the flight
                              * control board via serial */
-                            mavlink_tx_cmd cmd;
+                            mavlink_cmd cmd;
                             if (read(cmd_fifo_rx, &cmd, sizeof(cmd)) ==
                                 sizeof(cmd)) {
-                                mavlink_send_play_tune(0, serial);
-                                status(
-                                    "Send play tone message from server to the "
-                                    "flight controller");
+                                switch (cmd.type) {
+                                case PLAY_TUNE_CMD:
+                                    mavlink_send_play_tune(0, serial);
+                                    status(
+                                        "Send play tone message from server to "
+                                        "the "
+                                        "flight controller");
+                                    break;
+                                }
                             }
 
                             /* Check if we need to listen for a new
