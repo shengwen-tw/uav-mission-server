@@ -330,7 +330,7 @@ static const char *ipaddr_to_string(Ipv4Addr addr)
     static char ip[sizeof("255.255.255.255")];
 
     /* Format the IP address nicely */
-    if (snprintf(ip, sizeof(ip), "%d.%d.%d.%d", (addr >> 24) & 0xff,
+    if (snprintf(ip, sizeof(ip), "%u.%u.%u.%u", (addr >> 24) & 0xff,
                  (addr >> 16) & 0xff, (addr >> 8) & 0xff,
                  addr & 0xff) >= (int) sizeof(ip)) {
         return "Unknown";
