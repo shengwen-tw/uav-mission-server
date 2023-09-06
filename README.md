@@ -16,8 +16,18 @@ make all
 
 ## Usage
 
+**Server:**
+
 ```shell
 $ ./uart-server serial_port config_str [tcp_port]
+```
+
+**Commander:**
+
+To play a tune with designated track number:
+
+```
+$ ./uart-server tune track-number
 ```
 
 ### Arguments
