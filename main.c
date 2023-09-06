@@ -773,7 +773,7 @@ int run_uart_server(int argc, char const *argv[])
                             mavlink_tx_cmd cmd;
                             if (read(cmd_fifo_rx, &cmd, sizeof(cmd)) ==
                                 sizeof(cmd)) {
-                                mavlink_send_play_tune(serial);
+                                mavlink_send_play_tune(0, serial);
                                 status(
                                     "Send play tone message from server to the "
                                     "flight controller");

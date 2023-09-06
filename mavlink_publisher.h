@@ -3,6 +3,6 @@
 
 #include "serial.h"
 
-void mavlink_send_play_tune(SerialFd sport);
+void mavlink_send_play_tune(int tune_num, SerialFd sport);
 
 #endif
