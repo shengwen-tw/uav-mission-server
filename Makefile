@@ -20,7 +20,7 @@ CFLAGS += -O2 -Wall
 CFLAGS += -I lib/mavlink
 CFLAGS += -I lib/mavlink/common
 CFLAGS += -I.
-CFLAGS += -D MASTER_PID_FILE="\"uart-server.pid\""
+CFLAGS += -D MASTER_PID_FILE="\"/tmp/uart-server.pid\""
 
 TARGET = uart-server
 
