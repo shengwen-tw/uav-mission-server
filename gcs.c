@@ -48,6 +48,25 @@ void mav_gcs_command_long(mavlink_message_t *recvd_msg)
     mavlink_command_long_t mav_cmd_long;
     mavlink_msg_command_long_decode(recvd_msg, &mav_cmd_long);
 
+    /* Check: mavlink_msg_command_long.h
+     * param1 - param7 depend on the received command,
+     * check them on https://mavlink.io/en/messages/common.html
+     *
+    typedef struct __mavlink_command_long_t {
+        float param1;
+        float param2;
+        float param3;
+        float param4;
+        float param5;
+        float param6;
+        float param7;
+        uint16_t command;
+        uint8_t target_system;
+        uint8_t target_component;
+        uint8_t confirmation;
+    } mavlink_command_long_t;
+    */
+
     switch (mav_cmd_long.command) {
     case MAV_CMD_REQUEST_MESSAGE: /* 512 */ {
         /*TODO:
@@ -61,7 +80,13 @@ void mav_gcs_command_long(mavlink_message_t *recvd_msg)
          */
         break;
     }
-    case MAV_CMD_IMAGE_START_CAPTURE: {
+    case MAV_CMD_SET_CAMERA_FOCUS: /* 532 */ {
+        /* TODO:
+         * set camera focus and react GCS with
+         * MAV_RESULT_ACCEPTED
+         */
+    }
+    case MAV_CMD_IMAGE_START_CAPTURE: /* 2000 */ {
         /* TODO:
          * take photos and react GCS with
          * MAV_RESULT_ACCEPTED */
