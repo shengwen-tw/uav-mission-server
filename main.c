@@ -11,6 +11,7 @@
 #include <string.h>
 #include <time.h>
 #include "fcu.h"
+#include "gcs.h"
 #include "mavlink.h"
 #include "mavlink_parser.h"
 #include "mavlink_publisher.h"
@@ -597,18 +598,9 @@ static void handle_commanding_client(SerialFd sport)
 
     rbytes = recv(g_clients->client, (char *) g_cache, sizeof(g_cache), 0);
 
-    /* Parse MAVLink message for the gimbal device */
+    /* Parse MAVLink message from the ground control station (GCS) */
     if (g_clients->parse_me) {
-        for (int i = 0; i < rbytes; i++) {
-            if (mavlink_parse_char(MAVLINK_COMM_1, g_cache[i], &recvd_msg,
-                                   &mavlink_status) == 1) {
-                // parse_mavlink_msg(&recvd_msg);
-
-                /* Gimbal device only communicates with the server, the
-                 * received data has no need to pass to the flight controller */
-                return;
-            }
-        }
+        gcs_read_mavlink_msg(g_cache, rbytes);
     }
 
     if (rbytes <= 0) {

@@ -3,6 +3,8 @@
 #include "mavlink.h"
 #include "mavlink_parser.h"
 
+#define FCU_CHANNEL MAVLINK_COMM_1
+
 void mav_fcu_rc_channel(mavlink_message_t *recvd_msg);
 
 /* clang-format off */
@@ -22,7 +24,7 @@ mavlink_message_t fcu_msg;
 void fcu_read_mavlink_msg(uint8_t *buf, size_t nbytes)
 {
     for (int i = 0; i < nbytes; i++) {
-        if (mavlink_parse_char(MAVLINK_COMM_1, buf[i], &fcu_msg, &fcu_status) ==
+        if (mavlink_parse_char(FCU_CHANNEL, buf[i], &fcu_msg, &fcu_status) ==
             1) {
             parse_mavlink_msg(&fcu_msg, fcu_cmds, FCU_MAV_CMD_CNT);
         }
