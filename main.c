@@ -97,6 +97,8 @@ typedef struct {
 mavlink_status_t mavlink_status;
 mavlink_message_t recvd_msg;
 
+mavlink_cmd user_cmd;
+
 /**
  * A utility function that parses a string as an unsigned integer.
  *
@@ -636,6 +638,22 @@ static void sig_handler(int sig)
     }
 }
 
+bool read_user_cmd(void)
+{
+    int total_read = 0;
+    char *ptr = (char *) ((uintptr_t) &user_cmd + total_read);
+    int rsize = read(cmd_fifo_r, ptr, sizeof(char));
+
+    total_read += rsize;
+
+    if (total_read == sizeof(user_cmd)) {
+        total_read = 0;
+        return true;
+    } else {
+        return false;
+    }
+}
+
 int run_uart_server(int argc, char const *argv[])
 {
     int ret_val = EXIT_FAILURE;
@@ -758,12 +776,11 @@ int run_uart_server(int argc, char const *argv[])
 
                             /* Send MAVLink tone command to the flight
                              * control board via serial */
-                            mavlink_cmd cmd;
-                            int retval = read(cmd_fifo_r, &cmd, sizeof(cmd));
-                            if (retval == sizeof(cmd)) {
-                                switch (cmd.type) {
+                            if (read_user_cmd()) {
+                                switch (user_cmd.type) {
                                 case PLAY_TUNE_CMD:
-                                    mavlink_send_play_tune(cmd.arg[0], serial);
+                                    mavlink_send_play_tune(user_cmd.arg[0],
+                                                           serial);
                                     status(
                                         "Send play tone message from server to "
                                         "the "
