@@ -14,7 +14,7 @@ enum {
     ENUM_MAVLINK_HANDLER(mav_gcs_heartbeat),
     ENUM_MAVLINK_HANDLER(mav_gcs_command_long),
     ENUM_MAVLINK_HANDLER(mav_gcs_gimbal_manager_set_manual_ctrl),
-    FCU_MAV_CMD_CNT
+    GCS_MAV_CMD
 };
 /* clang-format on */
 
@@ -32,7 +32,7 @@ void gcs_read_mavlink_msg(uint8_t *buf, size_t nbytes)
     for (int i = 0; i < nbytes; i++) {
         if (mavlink_parse_char(GCS_CHANNEL, buf[i], &gcs_msg, &gcs_status) ==
             1) {
-            parse_mavlink_msg(&gcs_msg, gcs_cmds, FCU_MAV_CMD_CNT);
+            parse_mavlink_msg(&gcs_msg, gcs_cmds, GCS_MAV_CMD);
         }
     }
 }
