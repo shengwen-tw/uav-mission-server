@@ -832,7 +832,7 @@ void send_signal(int signo)
     kill(pid, signo);
 }
 
-#define CMD_FIFO "cmd_fifo"
+#define CMD_FIFO "/tmp/cmd_fifo"
 int main(int argc, char const *argv[])
 {
     int ret_val = EXIT_FAILURE;
