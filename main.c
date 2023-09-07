@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "fcu.h"
 #include "mavlink.h"
 #include "mavlink_parser.h"
 #include "mavlink_publisher.h"
@@ -552,6 +553,8 @@ static void send_data_to_clients(SerialFd sport)
         return;
     }
 
+    fcu_read_mavlink_msg(g_cache, rbytes);
+
     while (current) {
         size_t sent = 0;
 
@@ -599,7 +602,7 @@ static void handle_commanding_client(SerialFd sport)
         for (int i = 0; i < rbytes; i++) {
             if (mavlink_parse_char(MAVLINK_COMM_1, g_cache[i], &recvd_msg,
                                    &mavlink_status) == 1) {
-                parse_mavlink_msg(&recvd_msg);
+                // parse_mavlink_msg(&recvd_msg);
 
                 /* Gimbal device only communicates with the server, the
                  * received data has no need to pass to the flight controller */

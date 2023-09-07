@@ -16,6 +16,6 @@ struct mavlink_cmd {
     void (*handler)(mavlink_message_t *msg);
 };
 
-void parse_mavlink_msg(mavlink_message_t *msg);
+void parse_mavlink_msg(mavlink_message_t *msg, struct mavlink_cmd *cmd_list, size_t msg_cnt);
 
 #endif
