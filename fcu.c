@@ -39,26 +39,26 @@ void mav_fcu_gps_raw_int(mavlink_message_t *recvd_msg)
     mavlink_gps_raw_int_t gps_raw_int;
     mavlink_msg_gps_raw_int_decode(recvd_msg, &gps_raw_int);
 
-   /* Check: mavlink_msg_gps_raw_int.h
-    typedef struct __mavlink_gps_raw_int_t {
-        uint64_t time_usec;
-        int32_t lat;
-        int32_t lon;
-        int32_t alt;
-        uint16_t eph;
-        uint16_t epv;
-        uint16_t vel;
-        uint16_t cog;
-        uint8_t fix_type;
-        uint8_t satellites_visible;
-        int32_t alt_ellipsoid;
-        uint32_t h_acc;
-        uint32_t v_acc;
-        uint32_t vel_acc;
-        uint32_t hdg_acc;
-        uint16_t yaw;
-    } mavlink_gps_raw_int_t;
-    */
+    /* Check: mavlink_msg_gps_raw_int.h
+     typedef struct __mavlink_gps_raw_int_t {
+         uint64_t time_usec;
+         int32_t lat;
+         int32_t lon;
+         int32_t alt;
+         uint16_t eph;
+         uint16_t epv;
+         uint16_t vel;
+         uint16_t cog;
+         uint8_t fix_type;
+         uint8_t satellites_visible;
+         int32_t alt_ellipsoid;
+         uint32_t h_acc;
+         uint32_t v_acc;
+         uint32_t vel_acc;
+         uint32_t hdg_acc;
+         uint16_t yaw;
+     } mavlink_gps_raw_int_t;
+     */
 }
 
 void mav_fcu_rc_channel(mavlink_message_t *recvd_msg)
