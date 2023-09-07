@@ -643,7 +643,7 @@ static void sig_handler(int sig)
 
 bool read_user_cmd(void)
 {
-    int total_read = 0;
+    static int total_read = 0;
     char *ptr = (char *) ((uintptr_t) &user_cmd + total_read);
     int rsize = read(cmd_fifo_r, ptr, sizeof(char));
 
