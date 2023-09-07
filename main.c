@@ -61,7 +61,8 @@ typedef struct pollfd Waiter;
 #define EVENT_SERIAL_INDEX 1
 #define EVENT_SERVER_INDEX 2
 #define EVENT_CLIENT_INDEX 3
-#define EVENT_INDEX_COUNT_MAX 4
+#define EVENT_USER_CMD_INDEX 4
+#define EVENT_INDEX_COUNT_MAX 5
 
 /**
  * Simple utility macro to get the biggest of two integers.
@@ -633,19 +634,27 @@ static void sig_handler(int sig)
     }
 }
 
-bool read_user_cmd(void)
+void read_user_cmd(SerialFd sport)
 {
-    static int total_read = 0;
-    char *ptr = (char *) ((uintptr_t) &user_cmd + total_read);
-    int rsize = read(cmd_fifo_r, ptr, sizeof(char));
+    /* Read user command from the FIFO */
+    static int received = 0;
+    int rsize = read(cmd_fifo_r, (char *) &user_cmd + received,
+                     sizeof(mavlink_cmd) - received);
+    received += rsize;
 
-    total_read += rsize;
+    /* read complete */
+    if (received == sizeof(user_cmd)) {
+        received = 0;  // Reset
 
-    if (total_read == sizeof(user_cmd)) {
-        total_read = 0;
-        return true;
-    } else {
-        return false;
+        /* Select an action */
+        switch (user_cmd.type) {
+        case PLAY_TUNE_CMD:
+            mavlink_send_play_tune(user_cmd.arg[0], sport);
+            status(
+                "Send play tone message from "
+                "server to the flight controller");
+            break;
+        }
     }
 }
 
@@ -701,6 +710,7 @@ int run_uart_server(int argc, char const *argv[])
                         g_waiters[EVENT_CLOSE_INDEX].fd = g_close[0];
                         g_waiters[EVENT_SERIAL_INDEX].fd = serial;
                         g_waiters[EVENT_SERVER_INDEX].fd = server;
+                        g_waiters[EVENT_USER_CMD_INDEX].fd = cmd_fifo_r;
                         g_waiters[EVENT_CLIENT_INDEX].fd = -1;
 
                         for (event_idx = 0; event_idx < EVENT_INDEX_COUNT_MAX;
@@ -769,19 +779,11 @@ int run_uart_server(int argc, char const *argv[])
                                 g_waiters[EVENT_SERIAL_INDEX].revents = 0;
                             }
 
-                            /* Send MAVLink tone command to the flight
-                             * control board via serial */
-                            if (read_user_cmd()) {
-                                switch (user_cmd.type) {
-                                case PLAY_TUNE_CMD:
-                                    mavlink_send_play_tune(user_cmd.arg[0],
-                                                           serial);
-                                    status(
-                                        "Send play tone message from server to "
-                                        "the "
-                                        "flight controller");
-                                    break;
-                                }
+                            /* Event of receiving user commands */
+                            if (g_waiters[EVENT_USER_CMD_INDEX].revents &
+                                POLLIN) {
+                                read_user_cmd(serial);
+                                g_waiters[EVENT_USER_CMD_INDEX].revents = 0;
                             }
 
                             /* Check if we need to listen for a new
