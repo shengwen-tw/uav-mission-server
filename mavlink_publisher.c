@@ -1,5 +1,6 @@
 #include "mavlink.h"
 #include "serial.h"
+#include "util.h"
 
 #define TUNE_CNT 19
 
@@ -55,6 +56,8 @@ void mavlink_send_play_tune(int tune_num, SerialFd sport)
     mavlink_msg_play_tune_pack(sys_id, component_id, &msg, target_system,
                                target_component, tune_table[tune_num], tune2);
     mavlink_send_msg(&msg, sport);
+
+    status("RB5: Sent play_tune message.");
 }
 
 void mavlink_send_request_autopilot_capabilities(SerialFd sport)
@@ -82,5 +85,5 @@ void mavlink_send_request_autopilot_capabilities(SerialFd sport)
     mavlink_send_msg(&msg, sport);
 
     if (serial_workaround_verbose)
-        printf("[INFO] send request_autopilot_capabilities message\n");
+        status("RB5: Sent request_autopilot_capabilities message.");
 }

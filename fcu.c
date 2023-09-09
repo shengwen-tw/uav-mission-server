@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include "mavlink.h"
 #include "mavlink_parser.h"
+#include "util.h"
 
 #define FCU_CHANNEL MAVLINK_COMM_1
 
@@ -43,7 +44,7 @@ void fcu_read_mavlink_msg(uint8_t *buf, size_t nbytes)
     }
 
     if (fcu_verbose)
-        printf("[FCU] received undefined message #%d\n", fcu_msg.msgid);
+        status("FCU: Received undefined message #%d", fcu_msg.msgid);
 }
 
 void mav_fcu_gps_raw_int(mavlink_message_t *recvd_msg)
@@ -73,7 +74,7 @@ void mav_fcu_gps_raw_int(mavlink_message_t *recvd_msg)
      */
 
     if (fcu_verbose)
-        printf("[FCU] received gps_raw_int message.\n");
+        status("FCU: Received gps_raw_int message.");
 }
 
 void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
@@ -98,7 +99,7 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
     */
 
     if (fcu_verbose)
-        printf("[FCU] received rc_channels message.\n");
+        status("FCU: Received rc_channels message.");
 }
 
 void mav_fcu_autopilot_version(mavlink_message_t *recvd_msg)
@@ -106,7 +107,7 @@ void mav_fcu_autopilot_version(mavlink_message_t *recvd_msg)
     serial_status = true;
 
     if (serial_workaround_verbose)
-        printf("[INFO] received autopilot version message.\n");
+        status("FCU: received autopilot version message.");
 }
 
 bool serial_is_ready(void)

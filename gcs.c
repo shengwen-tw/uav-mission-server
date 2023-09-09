@@ -2,6 +2,7 @@
 
 #include "mavlink.h"
 #include "mavlink_parser.h"
+#include "util.h"
 
 #define GCS_CHANNEL MAVLINK_COMM_2
 
@@ -39,12 +40,12 @@ void gcs_read_mavlink_msg(uint8_t *buf, size_t nbytes)
     }
 
     if (gcs_verbose)
-        printf("[GCS] received undefined message #%d\n", gcs_msg.msgid);
+        status("GCS: Received undefined message #%d\n", gcs_msg.msgid);
 }
 
 void mav_gcs_heartbeat(mavlink_message_t *recvd_msg)
 {
-    printf("Received heartbeat from system %d.\n", recvd_msg->sysid);
+    status("GCS: Received heartbeat from system %d.\n", recvd_msg->sysid);
 }
 
 void mav_gcs_command_long(mavlink_message_t *recvd_msg)
@@ -73,7 +74,7 @@ void mav_gcs_command_long(mavlink_message_t *recvd_msg)
     */
 
     if (gcs_verbose)
-        printf("[gcs] received command_long message. command = %d.\n",
+        status("GCS: Received command_long message. command = %d.\n",
                mav_cmd_long.command);
 
     switch (mav_cmd_long.command) {
@@ -124,5 +125,5 @@ void mav_gcs_gimbal_manager_set_manual_ctrl(mavlink_message_t *recvd_msg)
     */
 
     if (gcs_verbose)
-        printf("[GCS] received gimbal_manager_set_manual_ctrl message.\n");
+        status("GCS: Received gimbal_manager_set_manual_ctrl message.\n");
 }

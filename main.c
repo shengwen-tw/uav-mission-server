@@ -371,7 +371,7 @@ static const char *current_timestamp_as_string(void)
  * A utility function that prints a printf-formatted string to STDOUT with a
  * timestamp.
  */
-static void status(const char *fmt, ...)
+void status(const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
@@ -651,9 +651,6 @@ void read_user_cmd(SerialFd sport)
         switch (user_cmd.type) {
         case PLAY_TUNE_CMD:
             mavlink_send_play_tune(user_cmd.arg[0], sport);
-            status(
-                "Send play tone message from "
-                "server to the flight controller");
             break;
         }
     }
