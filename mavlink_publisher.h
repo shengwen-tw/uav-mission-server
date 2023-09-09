@@ -10,4 +10,7 @@ void mavlink_send_ack(int fd,
                       uint8_t result,
                       uint8_t progress,
                       int32_t result_param2);
+void mavlink_send_gimbal_manager_info(int fd);
+void mavlink_send_camera_info(int fd);
+
 #endif

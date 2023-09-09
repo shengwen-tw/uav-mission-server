@@ -7,7 +7,7 @@
 
 #define GCS_CHANNEL MAVLINK_COMM_2
 
-int gcs_fd = 0; //TODO: need to be assigned by the uart-server
+int gcs_fd = 0;  // TODO: need to be assigned by the uart-server
 
 void mav_gcs_heartbeat(mavlink_message_t *recvd_msg);
 void mav_gcs_command_long(mavlink_message_t *recvd_msg);
@@ -82,30 +82,29 @@ void mav_gcs_command_long(mavlink_message_t *recvd_msg)
 
     switch (mav_cmd_long.command) {
     case MAV_CMD_REQUEST_MESSAGE: /* 512 */ {
-        /*TODO:
-         * response GIMBAL_MANAGER_INFORMATION
-         * (gimbal discovery)
-         */
+        int req_msg = (int) mav_cmd_long.param1;
 
-        /* TODO:
-         * reponse CAMERA_INFORMATION
-         * (camera discovery)
-         */
+        if (req_msg == MAVLINK_MSG_ID_GIMBAL_MANAGER_INFORMATION) {
+            mavlink_send_gimbal_manager_info(gcs_fd);
+        } else if (req_msg == MAVLINK_MSG_ID_CAMERA_INFORMATION) {
+            mavlink_send_camera_info(gcs_fd);
+        }
+
         break;
     }
     case MAV_CMD_SET_CAMERA_FOCUS: /* 532 */ {
         /* TODO: set camera focus */
 
-         /* Send acknowledgement to the GCS */
-         mavlink_send_ack(gcs_fd, MAV_CMD_SET_CAMERA_FOCUS,
-                          MAV_RESULT_ACCEPTED, 100, 0);
+        /* Send acknowledgement to the GCS */
+        mavlink_send_ack(gcs_fd, MAV_CMD_SET_CAMERA_FOCUS, MAV_RESULT_ACCEPTED,
+                         100, 0);
     }
     case MAV_CMD_IMAGE_START_CAPTURE: /* 2000 */ {
         /* TODO: take a photo */
 
-         /* Send acknowledgement to the GCS */
-         mavlink_send_ack(gcs_fd, MAV_CMD_IMAGE_START_CAPTURE,
-                          MAV_RESULT_ACCEPTED, 100, 0);
+        /* Send acknowledgement to the GCS */
+        mavlink_send_ack(gcs_fd, MAV_CMD_IMAGE_START_CAPTURE,
+                         MAV_RESULT_ACCEPTED, 100, 0);
         break;
     }
     }

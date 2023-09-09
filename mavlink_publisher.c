@@ -1,3 +1,4 @@
+#include <math.h>
 #include "mavlink.h"
 #include "serial.h"
 #include "util.h"
@@ -105,5 +106,56 @@ void mavlink_send_ack(int fd,
     mavlink_msg_command_ack_pack(sys_id, component_id, &msg, cmd, result,
                                  progress, result_param2, target_system,
                                  target_component);
+    mavlink_send_msg(&msg, fd);
+}
+
+void mavlink_send_gimbal_manager_info(int fd)
+{
+    uint8_t sys_id = RB5_ID;
+    uint8_t component_id = MAV_COMP_ID_ONBOARD_COMPUTER;
+
+    uint32_t time_boot_ms = 0;
+    uint32_t cap_flags = 0;
+    uint8_t gimbal_device_id = 1;
+    float tilt_max = +M_PI / 2;  // pitch max
+    float tilt_min = -M_PI / 2;  // pitch min
+    float tilt_rate_max = 0;     // pitch rate max
+    float pan_max = +M_PI;       // yaw max
+    float pan_min = -M_PI;       // yaw min
+    float pan_rate_max = 0;      // yaw rate max
+
+    mavlink_message_t msg;
+    mavlink_msg_gimbal_manager_information_pack(
+        sys_id, component_id, &msg, time_boot_ms, cap_flags, gimbal_device_id,
+        tilt_max, tilt_min, tilt_rate_max, pan_max, pan_min, pan_rate_max);
+    mavlink_send_msg(&msg, fd);
+}
+
+void mavlink_send_camera_info(int fd)
+{
+    uint8_t sys_id = RB5_ID;
+    uint8_t component_id = MAV_COMP_ID_ONBOARD_COMPUTER;
+
+    uint32_t time_boot_ms = 0;
+    uint8_t *vendor_name = (uint8_t *) "K-Tri Technology";
+    uint8_t *model_name = (uint8_t *) "KTG";
+    uint32_t firmware_version = 0;  // 0 if unknown
+    float focal_length = 0;         // mm, NaN if unknown
+    float sensor_size_h = 0;        // mm, NaN if unknown
+    float sensor_size_v = 0;        // mm, NaN if unknown
+    uint16_t resolution_h = 0;      // pix, 0 if unknown
+    uint16_t resolution_v = 0;      // pix, 0 if unknown
+    uint8_t lens_id = 0;            // 0 if unknown
+    uint32_t flags = CAMERA_CAP_FLAGS_CAPTURE_IMAGE;
+    uint16_t cam_definition_version = 0;
+    char *cam_definition_uri = "";
+    uint8_t gimbal_device_id = 1;  // Gimbal's ID associates with the camera
+
+    mavlink_message_t msg;
+    mavlink_msg_camera_information_pack(
+        sys_id, component_id, &msg, time_boot_ms, vendor_name, model_name,
+        firmware_version, focal_length, sensor_size_h, sensor_size_v,
+        resolution_h, resolution_v, lens_id, flags, cam_definition_version,
+        cam_definition_uri, gimbal_device_id);
     mavlink_send_msg(&msg, fd);
 }
