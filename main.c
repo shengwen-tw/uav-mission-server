@@ -101,6 +101,7 @@ mavlink_status_t mavlink_status;
 mavlink_message_t recvd_msg;
 
 mavlink_cmd user_cmd;
+bool serial_workaround_verbose = true;
 
 /**
  * A utility function that parses a string as an unsigned integer.
@@ -658,6 +659,22 @@ void read_user_cmd(SerialFd sport)
     }
 }
 
+void flush_serial_until_ready(SerialFd sport)
+{
+    /* Send message to test if serial is ready to work */
+    mavlink_send_request_autopilot_capabilities(sport);
+}
+
+void wait_serial_flushing_complete(SerialFd sport)
+{
+    /* Wait for FCU's reply */
+    long rbytes = serial_read(sport, g_cache, sizeof(g_cache));
+    if (rbytes <= 0) {
+        return;
+    }
+    fcu_read_mavlink_msg(g_cache, rbytes);
+}
+
 int run_uart_server(int argc, char const *argv[])
 {
     int ret_val = EXIT_FAILURE;
@@ -737,6 +754,15 @@ int run_uart_server(int argc, char const *argv[])
                             argv[ARGS_SERIAL_PORT], cfg.baudrate,
                             parity_to_string(cfg.parity), cfg.data_bits,
                             stop_bits_to_string(cfg.stop_bits), port);
+
+                        /* Workaround for RB5's buggy serial port */
+                        while (!serial_is_ready()) {
+                            flush_serial_until_ready(serial);
+                            usleep(500000);  // 500ms
+                            wait_serial_flushing_complete(serial);
+                        }
+
+                        status("RB5's serial port flushing complete.");
 
                         /* Main server loop */
                         for (;;) {

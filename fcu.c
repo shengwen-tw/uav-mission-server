@@ -1,5 +1,6 @@
 /* MAVLink parser for flight control unit (FCU) */
 
+#include <stdbool.h>
 #include "mavlink.h"
 #include "mavlink_parser.h"
 
@@ -7,11 +8,15 @@
 
 void mav_fcu_gps_raw_int(mavlink_message_t *recvd_msg);
 void mav_fcu_rc_channels(mavlink_message_t *recvd_msg);
+void mav_fcu_autopilot_version(mavlink_message_t *recvd_msg);
+
+extern bool serial_workaround_verbose;
 
 /* clang-format off */
 enum {
     ENUM_MAVLINK_HANDLER(mav_fcu_rc_channels),
     ENUM_MAVLINK_HANDLER(mav_fcu_gps_raw_int),
+    ENUM_MAVLINK_HANDLER(mav_fcu_autopilot_version),
     FCU_MAV_CMD_CNT
 };
 /* clang-format on */
@@ -19,12 +24,14 @@ enum {
 struct mavlink_cmd fcu_cmds[] = {
     DEF_MAVLINK_CMD(mav_fcu_gps_raw_int, 24),
     DEF_MAVLINK_CMD(mav_fcu_rc_channels, 65),
-};
+    DEF_MAVLINK_CMD(mav_fcu_autopilot_version, 148)};
+/* clang-format on */
 
 mavlink_status_t fcu_status;
 mavlink_message_t fcu_msg;
 
 bool fcu_verbose = false;
+bool serial_status = false;
 
 void fcu_read_mavlink_msg(uint8_t *buf, size_t nbytes)
 {
@@ -92,4 +99,17 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
 
     if (fcu_verbose)
         printf("[FCU] received rc_channels message.\n");
+}
+
+void mav_fcu_autopilot_version(mavlink_message_t *recvd_msg)
+{
+    serial_status = true;
+
+    if (serial_workaround_verbose)
+        printf("[INFO] received autopilot version message.\n");
+}
+
+bool serial_is_ready(void)
+{
+    return serial_status;
 }

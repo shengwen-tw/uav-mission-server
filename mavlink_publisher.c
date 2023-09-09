@@ -3,6 +3,8 @@
 
 #define TUNE_CNT 19
 
+extern bool serial_workaround_verbose;
+
 /* Source:
  * https://github.com/PX4/PX4-Autopilot/blob/main/src/lib/tunes/tune_definition.desc#L89C44-L89C90
  */
@@ -53,4 +55,32 @@ void mavlink_send_play_tune(int tune_num, SerialFd sport)
     mavlink_msg_play_tune_pack(sys_id, component_id, &msg, target_system,
                                target_component, tune_table[tune_num], tune2);
     mavlink_send_msg(&msg, sport);
+}
+
+void mavlink_send_request_autopilot_capabilities(SerialFd sport)
+{
+    uint8_t sys_id = 1;
+    uint8_t component_id = 191;
+    uint8_t target_system = 0;
+    uint8_t target_component = 0;
+    uint16_t command = MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES;
+    uint8_t confirmation = 0;
+
+    /* param1: version (1), param2-7: don't care */
+    float param1 = 1;
+    float param2 = 0;
+    float param3 = 0;
+    float param4 = 0;
+    float param5 = 0;
+    float param6 = 0;
+    float param7 = 0;
+
+    mavlink_message_t msg;
+    mavlink_msg_command_long_pack(
+        sys_id, component_id, &msg, target_system, target_component, command,
+        confirmation, param1, param2, param3, param4, param5, param6, param7);
+    mavlink_send_msg(&msg, sport);
+
+    if (serial_workaround_verbose)
+        printf("[INFO] send request_autopilot_capabilities message\n");
 }
