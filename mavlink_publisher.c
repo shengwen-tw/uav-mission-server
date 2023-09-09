@@ -2,6 +2,8 @@
 #include "serial.h"
 #include "util.h"
 
+#define FCU_ID 1
+#define RB5_ID 2
 #define TUNE_CNT 19
 
 extern bool serial_workaround_verbose;
@@ -33,39 +35,39 @@ char *tune_table[TUNE_CNT] = {
 };
 /* clang-format on */
 
-void mavlink_send_msg(mavlink_message_t *msg, SerialFd sport)
+void mavlink_send_msg(mavlink_message_t *msg, int fd)
 {
     uint8_t buf[MAVLINK_MAX_PACKET_LEN];
     size_t len = mavlink_msg_to_send_buffer(buf, msg);
 
-    serial_write(sport, buf, len);
+    serial_write(fd, buf, len);
 }
 
-void mavlink_send_play_tune(int tune_num, SerialFd sport)
+void mavlink_send_play_tune(int tune_num, int fd)
 {
     if (tune_num >= TUNE_CNT)
         return;
 
-    uint8_t sys_id = 1;
-    uint8_t component_id = 191;
-    uint8_t target_system = 0;
-    uint8_t target_component = 0;
+    uint8_t sys_id = RB5_ID;
+    uint8_t component_id = MAV_COMP_ID_ONBOARD_COMPUTER;
+    uint8_t target_system = FCU_ID;
+    uint8_t target_component = MAV_COMP_ID_ALL;
     const char *tune2 = "";  // extension of the first tune argument
 
     mavlink_message_t msg;
     mavlink_msg_play_tune_pack(sys_id, component_id, &msg, target_system,
                                target_component, tune_table[tune_num], tune2);
-    mavlink_send_msg(&msg, sport);
+    mavlink_send_msg(&msg, fd);
 
     status("RB5: Sent play_tune message.");
 }
 
-void mavlink_send_request_autopilot_capabilities(SerialFd sport)
+void mavlink_send_request_autopilot_capabilities(int fd)
 {
-    uint8_t sys_id = 1;
-    uint8_t component_id = 191;
-    uint8_t target_system = 0;
-    uint8_t target_component = 0;
+    uint8_t sys_id = RB5_ID;
+    uint8_t component_id = MAV_COMP_ID_ONBOARD_COMPUTER;
+    uint8_t target_system = FCU_ID;
+    uint8_t target_component = MAV_COMP_ID_ALL;
     uint16_t command = MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES;
     uint8_t confirmation = 0;
 
@@ -82,8 +84,26 @@ void mavlink_send_request_autopilot_capabilities(SerialFd sport)
     mavlink_msg_command_long_pack(
         sys_id, component_id, &msg, target_system, target_component, command,
         confirmation, param1, param2, param3, param4, param5, param6, param7);
-    mavlink_send_msg(&msg, sport);
+    mavlink_send_msg(&msg, fd);
 
     if (serial_workaround_verbose)
         status("RB5: Sent request_autopilot_capabilities message.");
+}
+
+void mavlink_send_ack(int fd,
+                      uint16_t cmd,
+                      uint8_t result,
+                      uint8_t progress,
+                      int32_t result_param2)
+{
+    uint8_t sys_id = RB5_ID;
+    uint8_t component_id = MAV_COMP_ID_ONBOARD_COMPUTER;
+    uint8_t target_system = FCU_ID;
+    uint8_t target_component = MAV_COMP_ID_ALL;
+
+    mavlink_message_t msg;
+    mavlink_msg_command_ack_pack(sys_id, component_id, &msg, cmd, result,
+                                 progress, result_param2, target_system,
+                                 target_component);
+    mavlink_send_msg(&msg, fd);
 }
