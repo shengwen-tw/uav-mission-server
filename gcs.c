@@ -27,6 +27,8 @@ struct mavlink_cmd gcs_cmds[] = {
 mavlink_status_t gcs_status;
 mavlink_message_t gcs_msg;
 
+bool gcs_verbose = false;
+
 void gcs_read_mavlink_msg(uint8_t *buf, size_t nbytes)
 {
     for (int i = 0; i < nbytes; i++) {
@@ -35,6 +37,9 @@ void gcs_read_mavlink_msg(uint8_t *buf, size_t nbytes)
             parse_mavlink_msg(&gcs_msg, gcs_cmds, GCS_MAV_CMD);
         }
     }
+
+    if (gcs_verbose)
+        printf("[GCS] received undefined message #%d\n", gcs_msg.msgid);
 }
 
 void mav_gcs_heartbeat(mavlink_message_t *recvd_msg)
@@ -66,6 +71,10 @@ void mav_gcs_command_long(mavlink_message_t *recvd_msg)
         uint8_t confirmation;
     } mavlink_command_long_t;
     */
+
+    if (gcs_verbose)
+        printf("[gcs] received command_long message. command = %d.\n",
+               mav_cmd_long.command);
 
     switch (mav_cmd_long.command) {
     case MAV_CMD_REQUEST_MESSAGE: /* 512 */ {
@@ -113,4 +122,7 @@ void mav_gcs_gimbal_manager_set_manual_ctrl(mavlink_message_t *recvd_msg)
         uint8_t gimbal_device_id;
     } mavlink_gimbal_manager_set_manual_control_t;
     */
+
+    if (gcs_verbose)
+        printf("[GCS] received gimbal_manager_set_manual_ctrl message.\n");
 }

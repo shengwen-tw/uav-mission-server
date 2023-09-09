@@ -6,11 +6,11 @@
 #define FCU_CHANNEL MAVLINK_COMM_1
 
 void mav_fcu_gps_raw_int(mavlink_message_t *recvd_msg);
-void mav_fcu_rc_channel(mavlink_message_t *recvd_msg);
+void mav_fcu_rc_channels(mavlink_message_t *recvd_msg);
 
 /* clang-format off */
 enum {
-    ENUM_MAVLINK_HANDLER(mav_fcu_rc_channel),
+    ENUM_MAVLINK_HANDLER(mav_fcu_rc_channels),
     ENUM_MAVLINK_HANDLER(mav_fcu_gps_raw_int),
     FCU_MAV_CMD_CNT
 };
@@ -18,11 +18,13 @@ enum {
 
 struct mavlink_cmd fcu_cmds[] = {
     DEF_MAVLINK_CMD(mav_fcu_gps_raw_int, 24),
-    DEF_MAVLINK_CMD(mav_fcu_rc_channel, 65),
+    DEF_MAVLINK_CMD(mav_fcu_rc_channels, 65),
 };
 
 mavlink_status_t fcu_status;
 mavlink_message_t fcu_msg;
+
+bool fcu_verbose = false;
 
 void fcu_read_mavlink_msg(uint8_t *buf, size_t nbytes)
 {
@@ -32,6 +34,9 @@ void fcu_read_mavlink_msg(uint8_t *buf, size_t nbytes)
             parse_mavlink_msg(&fcu_msg, fcu_cmds, FCU_MAV_CMD_CNT);
         }
     }
+
+    if (fcu_verbose)
+        printf("[FCU] received undefined message #%d\n", fcu_msg.msgid);
 }
 
 void mav_fcu_gps_raw_int(mavlink_message_t *recvd_msg)
@@ -59,9 +64,12 @@ void mav_fcu_gps_raw_int(mavlink_message_t *recvd_msg)
          uint16_t yaw;
      } mavlink_gps_raw_int_t;
      */
+
+    if (fcu_verbose)
+        printf("[FCU] received gps_raw_int message.\n");
 }
 
-void mav_fcu_rc_channel(mavlink_message_t *recvd_msg)
+void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
 {
     mavlink_rc_channels_raw_t rc_channels_raw;
     mavlink_msg_rc_channels_raw_decode(recvd_msg, &rc_channels_raw);
@@ -81,4 +89,7 @@ void mav_fcu_rc_channel(mavlink_message_t *recvd_msg)
         uint8_t rssi;
     } mavlink_rc_channels_raw_t;
     */
+
+    if (fcu_verbose)
+        printf("[FCU] received rc_channels message.\n");
 }
