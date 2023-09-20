@@ -11,7 +11,6 @@
 #include <string.h>
 #include <time.h>
 #include "fcu.h"
-#include "gcs.h"
 #include "mavlink.h"
 #include "mavlink_parser.h"
 #include "mavlink_publisher.h"
@@ -85,9 +84,6 @@ struct ClientNode {
     Socket client; /* The client socket */
     struct ClientNode
         *next; /* Pointer to the next client node in the clients list */
-
-    /* MAVLink parser */
-    bool parse_me;
 };
 
 enum { PLAY_TUNE_CMD };
@@ -465,8 +461,6 @@ static int accept_client(Socket server)
         goto cleanup;
     }
 
-    new_client->parse_me = 0;  // TODO: identify the Gimbal device
-
     memset(new_client, 0, sizeof(*new_client));
 
     if (((new_client->client = accept(server, (struct sockaddr *) &remote,
@@ -599,11 +593,6 @@ static void handle_commanding_client(SerialFd sport)
     }
 
     rbytes = recv(g_clients->client, (char *) g_cache, sizeof(g_cache), 0);
-
-    /* Parse MAVLink message from the ground control station (GCS) */
-    if (g_clients->parse_me) {
-        gcs_read_mavlink_msg(g_cache, rbytes);
-    }
 
     if (rbytes <= 0) {
         if (tryout++ == 3) {

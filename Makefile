@@ -29,7 +29,6 @@ SRCS := \
 	serial.c \
 	system.c \
 	fcu.c \
-        gcs.c \
 	mavlink_parser.c \
 	mavlink_publisher.c
 
