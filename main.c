@@ -15,6 +15,7 @@
 #include "mavlink_parser.h"
 #include "mavlink_publisher.h"
 #include "serial.h"
+#include "siyi_camera.h"
 #include "system.h"
 
 #if (defined(__unix__) || defined(unix)) && !defined(USG)
@@ -698,6 +699,8 @@ int run_uart_server(int argc, char const *argv[])
             } else if (listen(server, 10) != 0) {
                 error("Failed to start TCP listen");
             } else {
+                siyi_cam_open();
+
                 SerialFd serial =
                     serial_open(argv[ARGS_SERIAL_PORT], &cfg, SERIAL_TIMEOUT);
 
@@ -849,6 +852,14 @@ void send_signal(int signo)
 #define CMD_FIFO "/tmp/cmd_fifo"
 int main(int argc, char const *argv[])
 {
+#if 1 /* >>> TEST CODE <<< */
+    siyi_cam_open();
+    siyi_cam_gimbal_rotate(100, 100);
+    sleep(5);
+    siyi_cam_gimbal_rotate_neutral();
+
+    return 0;
+#endif
     int ret_val = EXIT_FAILURE;
 
     if (argc == 2) {

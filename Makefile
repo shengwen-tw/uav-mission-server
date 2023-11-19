@@ -30,7 +30,8 @@ SRCS := \
 	system.c \
 	fcu.c \
 	mavlink_parser.c \
-	mavlink_publisher.c
+	mavlink_publisher.c \
+        siyi_camera.c
 
 all: $(TARGET)
 
