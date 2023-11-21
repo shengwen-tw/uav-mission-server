@@ -7,6 +7,9 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <glib.h>
+#include <gst/gst.h>
+
 #include "siyi_camera.h"
 
 #define SIYI_CAM_IP "192.168.50.25"
@@ -21,7 +24,6 @@
 #define SIYI_GIMBAL_NEUTRAL_MSG_LEN (SIYI_HEADER_SZ + SIYI_CRC_SZ + 1)
 
 static int siyi_cam_fd;
-static struct sockaddr_in siyi_cam_addr;
 
 static const uint16_t crc16_tab[256] = {
     0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50A5, 0x60C6, 0x70E7, 0x8108,
@@ -183,6 +185,47 @@ void siyi_cam_gimbal_rotate_neutral(void)
     send(siyi_cam_fd, buf, sizeof(buf), 0);
 }
 
+static int siyi_cam_video_connect(void)
+{
+    gst_init(NULL, NULL);
+
+    /* Create gstreamer pipeline */
+    GstElement *pipeline = gst_parse_launch(
+        "rtspsrc location=rtsp://10.20.13.106:8900/live latency=0 ! queue ! "
+        "rtph264depay ! h264parse ! avdec_h264 ! videoconvert ! videoscale ! "
+        "video/x-raw,width=1280,height=720 ! autovideosink",
+        NULL);
+    if (!pipeline) {
+        g_printerr("gstreamer: Failed to create pipeline\n");
+        return -1;
+    }
+
+    /* Start playing */
+    GstStateChangeReturn ret =
+        gst_element_set_state(pipeline, GST_STATE_PLAYING);
+    if (ret == GST_STATE_CHANGE_FAILURE) {
+        g_printerr("Unable to set the pipeline to the playing state.\n");
+        gst_object_unref(pipeline);
+        return -1;
+    }
+
+    printf("gstreamer: Start playing...\n");
+
+    /* Wait until error or EOS */
+    GstBus *bus = gst_element_get_bus(pipeline);
+    GstMessage *msg = gst_bus_timed_pop_filtered(
+        bus, GST_CLOCK_TIME_NONE, GST_MESSAGE_ERROR | GST_MESSAGE_EOS);
+
+    /* Free resources */
+    if (msg != NULL)
+        gst_message_unref(msg);
+    gst_object_unref(bus);
+    gst_element_set_state(pipeline, GST_STATE_NULL);
+    gst_object_unref(pipeline);
+
+    return 0;
+}
+
 void siyi_cam_open(void)
 {
     /* Initialize UDP socket */
@@ -204,4 +247,6 @@ void siyi_cam_open(void)
     }
 
     printf("SIYI camera connected.\n");
+
+    siyi_cam_video_connect();
 }
