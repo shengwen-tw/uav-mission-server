@@ -14,6 +14,7 @@
 #include "mavlink.h"
 #include "mavlink_parser.h"
 #include "mavlink_publisher.h"
+#include "rtsp_stream.h"
 #include "serial.h"
 #include "siyi_camera.h"
 #include "system.h"
@@ -852,14 +853,32 @@ void send_signal(int signo)
 #define CMD_FIFO "/tmp/cmd_fifo"
 int main(int argc, char const *argv[])
 {
-#if 1 /* >>> TEST CODE <<< */
+#define TEST_SELECT 1
+
+#if (TEST_SELECT == 0)
+    /* Gimbal test */
     siyi_cam_open();
+
     siyi_cam_gimbal_rotate(100, 100);
     sleep(5);
     siyi_cam_gimbal_rotate_neutral();
 
     return 0;
+#elif (TEST_SELECT == 1)
+    /* GStreamer streaming test */
+    rtsp_stream_display();
+    return 0;
+#elif (TEST_SELECT == 2)
+    /* GStreamer JPEG saving test */
+    rtsp_jpeg_saver();
+    return 0;
 #endif
+
+#if 0
+    siyi_cam_open();
+    rtsp_stream_init();
+#endif
+
     int ret_val = EXIT_FAILURE;
 
     if (argc == 2) {
