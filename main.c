@@ -853,7 +853,7 @@ void send_signal(int signo)
 #define CMD_FIFO "/tmp/cmd_fifo"
 int main(int argc, char const *argv[])
 {
-#define TEST_SELECT 1
+#define TEST_SELECT 3
 
 #if (TEST_SELECT == 0)
     /* Gimbal test */
@@ -871,6 +871,10 @@ int main(int argc, char const *argv[])
 #elif (TEST_SELECT == 2)
     /* GStreamer JPEG saving test */
     rtsp_jpeg_saver();
+    return 0;
+#elif (TEST_SELECT == 3)
+    /* GStreamer MP4 saving test */
+    rtsp_mp4_saver();
     return 0;
 #endif
 

@@ -4,6 +4,7 @@
 void rtsp_stream_init(void);
 
 int rtsp_stream_display(void);
+int rtsp_mp4_saver(void);
 int rtsp_jpeg_saver(void);
 
 #endif

@@ -3,7 +3,7 @@
 #include <glib.h>
 #include <gst/gst.h>
 
-#define RTSP_STREAM_URL "rtsp://10.20.13.106:8900/live"
+#define RTSP_STREAM_URL "rtsp://10.20.13.115:8900/live"
 #define VIDEO_FORMAT "video/x-raw"
 #define FRAME_WIDTH 1280
 #define FRAME_HEIGHT 720
@@ -16,6 +16,7 @@ typedef struct {
     GstElement *convert;
     GstElement *scale;
     GstElement *encoder;
+    GstElement *mux;
     GstElement *sink;
 } gst_data_t;
 
@@ -133,6 +134,86 @@ int rtsp_jpeg_saver(void)
                      &data);
     g_signal_connect(data.sink, "new-sample", G_CALLBACK(on_new_sample_handler),
                      NULL);
+
+    /* Start GStreamer */
+    gst_element_set_state(pipeline, GST_STATE_PLAYING);
+
+    printf("gstreamer: Start playing...\n");
+
+    /* Wait until received error or EOS message */
+    GstBus *bus = gst_element_get_bus(pipeline);
+    gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE,
+                               GST_MESSAGE_ERROR | GST_MESSAGE_EOS);
+
+    /* Free resources */
+    gst_object_unref(bus);
+    gst_element_set_state(pipeline, GST_STATE_NULL);
+    gst_object_unref(pipeline);
+
+    return 0;
+}
+
+GstElement *pipeline;
+
+void sigintHandler(int unused)
+{
+    g_print("Sending EoS");
+    gst_element_send_event(pipeline, gst_event_new_eos());
+}
+
+int rtsp_mp4_saver(void)
+{
+    signal(SIGINT, sigintHandler);
+
+    gst_init(NULL, NULL);
+
+    /* Create pipeline */
+    pipeline = gst_pipeline_new("rtsp-streaming-pipeline");
+
+    /* Create elements */
+    gst_data_t data;
+    data.source = gst_element_factory_make("rtspsrc", "source");
+    data.depay = gst_element_factory_make("rtph264depay", "depay");
+    data.parse = gst_element_factory_make("h264parse", "parse");
+    data.decoder = gst_element_factory_make("avdec_h264", "decoder");
+    data.convert = gst_element_factory_make("videoconvert", "convert");
+    data.scale = gst_element_factory_make("videoscale", "scale");
+    data.encoder = gst_element_factory_make("x264enc", "encoder");
+    data.mux = gst_element_factory_make("mp4mux", "multiplexer");
+    data.sink = gst_element_factory_make("filesink", "sink");
+
+    if (!pipeline || !data.source || !data.depay || !data.parse ||
+        !data.decoder || !data.convert || !data.scale || !data.encoder ||
+        !data.mux || !data.sink) {
+        printf("Failed to create one or multiple gst elements\n");
+        return -1;
+    }
+
+    /* clang-format off */
+    g_object_set(G_OBJECT(data.source),
+                 "location", RTSP_STREAM_URL,
+                 "latency", 0,
+                 NULL);
+    /* clang-format on */
+    g_object_set(G_OBJECT(data.sink), "location", "record.mp4", NULL);
+
+    /* Add all elements into the pipe line */
+    gst_bin_add_many(GST_BIN(pipeline), data.source, data.depay, data.parse,
+                     data.decoder, data.convert, data.scale, data.encoder,
+                     data.mux, data.sink, NULL);
+
+    /* Link all elements in the pipeline */
+    if (!gst_element_link_many(data.depay, data.parse, data.decoder,
+                               data.convert, data.scale, data.encoder, data.mux,
+                               data.sink, NULL)) {
+        g_printerr("Failed to link elements\n");
+        gst_object_unref(pipeline);
+        return -1;
+    }
+
+    /* Attach signal handlers */
+    g_signal_connect(data.source, "pad-added", G_CALLBACK(pad_added_handler),
+                     &data);
 
     /* Start GStreamer */
     gst_element_set_state(pipeline, GST_STATE_PLAYING);
