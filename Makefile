@@ -3,7 +3,8 @@ UNAME := $(shell uname)
 ifeq ($(UNAME), Linux)
   # Linux (gcc)
   CFLAGS :=
-  CFLAGS += -Wno-address-of-packed-member \
+  CFLAGS += -Wno-stringop-overread \
+            -Wno-address-of-packed-member \
             -Wno-stringop-overflow \
             -Wno-unused-result \
             -Wno-array-bounds
