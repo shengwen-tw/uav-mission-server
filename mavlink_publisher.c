@@ -91,6 +91,20 @@ void mavlink_send_request_autopilot_capabilities(int fd)
         status("RB5: Sent request_autopilot_capabilities message.");
 }
 
+void mavlink_send_ping(int fd)
+{
+    uint8_t sys_id = RB5_ID;
+    uint8_t component_id = MAV_COMP_ID_ONBOARD_COMPUTER;
+    uint8_t target_component = MAV_COMP_ID_ALL;
+
+    mavlink_message_t msg;
+    mavlink_msg_ping_pack(sys_id, component_id, &msg, 0, 0, 255,
+                          target_component);
+    mavlink_send_msg(&msg, fd);
+
+    status("RB5: Sent ping message.");
+}
+
 void mavlink_send_ack(int fd,
                       uint16_t cmd,
                       uint8_t result,

@@ -7,6 +7,7 @@
 
 #define FCU_CHANNEL MAVLINK_COMM_1
 
+void mav_fcu_ping(mavlink_message_t *recvd_msg);
 void mav_fcu_gps_raw_int(mavlink_message_t *recvd_msg);
 void mav_fcu_rc_channels(mavlink_message_t *recvd_msg);
 void mav_fcu_autopilot_version(mavlink_message_t *recvd_msg);
@@ -15,17 +16,19 @@ extern bool serial_workaround_verbose;
 
 /* clang-format off */
 enum {
+    ENUM_MAVLINK_HANDLER(mav_fcu_ping),
     ENUM_MAVLINK_HANDLER(mav_fcu_rc_channels),
     ENUM_MAVLINK_HANDLER(mav_fcu_gps_raw_int),
     ENUM_MAVLINK_HANDLER(mav_fcu_autopilot_version),
     FCU_MAV_CMD_CNT
 };
-/* clang-format on */
 
 struct mavlink_cmd fcu_cmds[] = {
+    DEF_MAVLINK_CMD(mav_fcu_ping, 4),
     DEF_MAVLINK_CMD(mav_fcu_gps_raw_int, 24),
     DEF_MAVLINK_CMD(mav_fcu_rc_channels, 65),
-    DEF_MAVLINK_CMD(mav_fcu_autopilot_version, 148)};
+    DEF_MAVLINK_CMD(mav_fcu_autopilot_version, 148)
+};
 /* clang-format on */
 
 mavlink_status_t fcu_status;
@@ -45,6 +48,11 @@ void fcu_read_mavlink_msg(uint8_t *buf, size_t nbytes)
 
     if (fcu_verbose)
         status("FCU: Received undefined message #%d", fcu_msg.msgid);
+}
+
+void mav_fcu_ping(mavlink_message_t *recvd_msg)
+{
+    status("FCU: Received ping message.");
 }
 
 void mav_fcu_gps_raw_int(mavlink_message_t *recvd_msg)
@@ -73,8 +81,7 @@ void mav_fcu_gps_raw_int(mavlink_message_t *recvd_msg)
      } mavlink_gps_raw_int_t;
      */
 
-    if (fcu_verbose)
-        status("FCU: Received gps_raw_int message.");
+    status("FCU: Received gps_raw_int message.");
 }
 
 void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
@@ -98,16 +105,14 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
     } mavlink_rc_channels_raw_t;
     */
 
-    if (fcu_verbose)
-        status("FCU: Received rc_channels message.");
+    status("FCU: Received rc_channels message.");
 }
 
 void mav_fcu_autopilot_version(mavlink_message_t *recvd_msg)
 {
     serial_status = true;
 
-    if (serial_workaround_verbose)
-        status("FCU: received autopilot version message.");
+    status("FCU: received autopilot version message.");
 }
 
 bool serial_is_ready(void)

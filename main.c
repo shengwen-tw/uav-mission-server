@@ -754,6 +754,8 @@ int run_uart_server(int argc, char const *argv[])
 
                         status("RB5's serial port flushing complete.");
 
+                        mavlink_send_ping(serial);
+
                         /* Main server loop */
                         for (;;) {
                             int result =
@@ -853,7 +855,7 @@ void send_signal(int signo)
 #define CMD_FIFO "/tmp/cmd_fifo"
 int main(int argc, char const *argv[])
 {
-#define TEST_SELECT 3
+#define TEST_SELECT 4
 
 #if (TEST_SELECT == 0)
     /* Gimbal test */
