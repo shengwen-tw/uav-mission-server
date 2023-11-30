@@ -103,19 +103,25 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
 
     static float cam_yaw = 0;
     static float cam_pitch = 0;
+    static uint16_t button_a_last = 0;
+    static uint16_t button_b_last = 0;
 
     /* Map RC signals to [-100, 100] */
     float rc_yaw = ((float) rc_channels_raw.chan1_raw - RC_YAW_MID) /
                    (RC_YAW_MAX - RC_YAW_MIN) * 200;
     float rc_pitch = ((float) rc_channels_raw.chan2_raw - RC_PITCH_MID) /
                      (RC_PITCH_MAX - RC_PITCH_MIN) * 200;
+    uint16_t button_a = rc_channels_raw.chan5_raw;
+    uint16_t button_b = rc_channels_raw.chan6_raw;
 
     /* Reverse directions */
     rc_yaw *= -1;
     rc_pitch *= -1;
 
-    printf("cam-yaw: %f, cam-pitch: %f, rc-yaw: %f, rc-pitch: %f\n", cam_yaw,
-           cam_pitch, rc_yaw, rc_pitch);
+    printf(
+        "[A]: %u, [B]: %u, cam-yaw: %f, cam-pitch: %f, rc-yaw: %f, rc-pitch: "
+        "%f\n",
+        button_a, button_b, cam_yaw, cam_pitch, rc_yaw, rc_pitch);
 
     /* Increase the control signals */
     if (fabsf(rc_yaw) > 50.0f)
@@ -124,9 +130,20 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
     if (fabsf(rc_pitch) > 50.0f)
         cam_pitch += INC * (rc_pitch < 0 ? -1.0f : 1.0f);
 
-    /* Bound signals in the proper range */
+    /* Bound signals in proper range */
     bound_float(&cam_yaw, +135.0, -135.0);
     bound_float(&cam_pitch, +25.0, -90.0);
+
+    /* Detect button click */
+    if (button_a != button_a_last) {
+        button_a_last = button_a;
+        cam_yaw = 0.0f;
+        cam_pitch = 0.0f;
+    }
+
+    if (button_b != button_b_last) {
+        button_b_last = button_b;
+    }
 
     /* Send camera control signal */
     siyi_cam_gimbal_rotate((int16_t) (cam_yaw * 10),
