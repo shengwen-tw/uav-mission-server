@@ -1,8 +1,10 @@
 /* MAVLink parser for flight control unit (FCU) */
 
 #include <stdbool.h>
+#include "common.h"
 #include "mavlink.h"
 #include "mavlink_parser.h"
+#include "siyi_camera.h"
 #include "util.h"
 
 #define FCU_CHANNEL MAVLINK_COMM_1
@@ -81,31 +83,54 @@ void mav_fcu_gps_raw_int(mavlink_message_t *recvd_msg)
      } mavlink_gps_raw_int_t;
      */
 
-    status("FCU: Received gps_raw_int message.");
+    //    status("FCU: Received gps_raw_int message.");
 }
+
+#define RC_YAW_MIN 1102
+#define RC_YAW_MID 1515
+#define RC_YAW_MAX 1927
+
+#define RC_PITCH_MIN 1102
+#define RC_PITCH_MID 1515
+#define RC_PITCH_MAX 1927
 
 void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
 {
+#define INC 0.3
+
     mavlink_rc_channels_raw_t rc_channels_raw;
     mavlink_msg_rc_channels_raw_decode(recvd_msg, &rc_channels_raw);
 
-    /* Check: mavlink_msg_rc_channels_raw.h
-    typedef struct __mavlink_rc_channels_raw_t {
-        uint32_t time_boot_ms;
-        uint16_t chan1_raw;
-        uint16_t chan2_raw;
-        uint16_t chan3_raw;
-        uint16_t chan4_raw;
-        uint16_t chan5_raw;
-        uint16_t chan6_raw;
-        uint16_t chan7_raw;
-        uint16_t chan8_raw;
-        uint8_t port;
-        uint8_t rssi;
-    } mavlink_rc_channels_raw_t;
-    */
+    static float cam_yaw = 0;
+    static float cam_pitch = 0;
 
-    status("FCU: Received rc_channels message.");
+    /* Map RC signals to [-100, 100] */
+    float rc_yaw = ((float) rc_channels_raw.chan1_raw - RC_YAW_MID) /
+                   (RC_YAW_MAX - RC_YAW_MIN) * 200;
+    float rc_pitch = ((float) rc_channels_raw.chan2_raw - RC_PITCH_MID) /
+                     (RC_PITCH_MAX - RC_PITCH_MIN) * 200;
+
+    /* Reverse directions */
+    rc_yaw *= -1;
+    rc_pitch *= -1;
+
+    printf("cam-yaw: %f, cam-pitch: %f, rc-yaw: %f, rc-pitch: %f\n", cam_yaw,
+           cam_pitch, rc_yaw, rc_pitch);
+
+    /* Increase the control signals */
+    if (fabsf(rc_yaw) > 50.0f)
+        cam_yaw += INC * (rc_yaw < 0 ? -1.0f : 1.0f);
+
+    if (fabsf(rc_pitch) > 50.0f)
+        cam_pitch += INC * (rc_pitch < 0 ? -1.0f : 1.0f);
+
+    /* Bound signals in the proper range */
+    bound_float(&cam_yaw, +135.0, -135.0);
+    bound_float(&cam_pitch, +25.0, -90.0);
+
+    /* Send camera control signal */
+    siyi_cam_gimbal_rotate((int16_t) (cam_yaw * 10),
+                           (int16_t) (cam_pitch * 10));
 }
 
 void mav_fcu_autopilot_version(mavlink_message_t *recvd_msg)

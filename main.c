@@ -705,6 +705,8 @@ int run_uart_server(int argc, char const *argv[])
                 SerialFd serial =
                     serial_open(argv[ARGS_SERIAL_PORT], &cfg, SERIAL_TIMEOUT);
 
+                siyi_cam_gimbal_rotate_neutral();
+
                 if (serial == SERIAL_INVALID_FD) {
                     error("Failed to open the requested serial port");
                 } else {
@@ -858,14 +860,6 @@ int main(int argc, char const *argv[])
 #define TEST_SELECT 4
 
 #if (TEST_SELECT == 0)
-    /* Gimbal test */
-    siyi_cam_open();
-
-    siyi_cam_gimbal_rotate(100, 100);
-    sleep(5);
-    siyi_cam_gimbal_rotate_neutral();
-
-    return 0;
 #elif (TEST_SELECT == 1)
     /* GStreamer streaming test */
     rtsp_stream_display();
@@ -881,7 +875,6 @@ int main(int argc, char const *argv[])
 #endif
 
 #if 0
-    siyi_cam_open();
     rtsp_stream_init();
 #endif
 
