@@ -94,6 +94,10 @@ void mav_fcu_gps_raw_int(mavlink_message_t *recvd_msg)
 #define RC_PITCH_MID 1515
 #define RC_PITCH_MAX 1927
 
+#define RC_SCROLL_MIN 1102
+#define RC_SCROLL_MID 1515
+#define RC_SCROLL_MAX 1927
+
 void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
 {
 #define INC 0.3
@@ -104,7 +108,7 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
     static float cam_yaw = 0;
     static float cam_pitch = 0;
     static uint16_t button_a_last = 0;
-    static uint16_t button_b_last = 0;
+    static bool focus_stop = false;
 
     /* Map RC signals to [-100, 100] */
     float rc_yaw = ((float) rc_channels_raw.chan1_raw - RC_YAW_MID) /
@@ -112,16 +116,17 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
     float rc_pitch = ((float) rc_channels_raw.chan2_raw - RC_PITCH_MID) /
                      (RC_PITCH_MAX - RC_PITCH_MIN) * 200;
     uint16_t button_a = rc_channels_raw.chan5_raw;
-    uint16_t button_b = rc_channels_raw.chan6_raw;
+    uint16_t scroll = rc_channels_raw.chan6_raw;
 
     /* Reverse directions */
     rc_yaw *= -1;
     rc_pitch *= -1;
 
     printf(
-        "[A]: %u, [B]: %u, cam-yaw: %f, cam-pitch: %f, rc-yaw: %f, rc-pitch: "
+        "[A]: %u, scroll: %u, cam-yaw: %f, cam-pitch: %f, rc-yaw: %f, "
+        "rc-pitch: "
         "%f\n",
-        button_a, button_b, cam_yaw, cam_pitch, rc_yaw, rc_pitch);
+        button_a, scroll, cam_yaw, cam_pitch, rc_yaw, rc_pitch);
 
     /* Increase the control signals */
     if (fabsf(rc_yaw) > 50.0f)
@@ -141,8 +146,18 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
         cam_pitch = 0.0f;
     }
 
-    if (button_b != button_b_last) {
-        button_b_last = button_b;
+    /* Handle scroll button */
+    if (scroll <= RC_SCROLL_MIN) {
+        siyi_cam_manual_focus(SIYI_CAM_ZOOM_OUT);
+        focus_stop = true;
+        printf("Zoom out\n");
+    } else if (scroll >= RC_SCROLL_MAX) {
+        siyi_cam_manual_focus(SIYI_CAM_ZOOM_IN);
+        focus_stop = true;
+        printf("Zoom in\n");
+    } else if (focus_stop) {
+        siyi_cam_manual_focus(SIYI_CAM_ZOOM_STOP);
+        focus_stop = false;
     }
 
     /* Send camera control signal */

@@ -15,7 +15,7 @@
 #define SIYI_HEADER_SZ 8
 #define SIYI_CRC_SZ 2
 
-#define SIYI_FOCUS_MSG_LEN (SIYI_HEADER_SZ + SIYI_CRC_SZ + 3)
+#define SIYI_FOCUS_MSG_LEN (SIYI_HEADER_SZ + SIYI_CRC_SZ + 1)
 #define SIYI_GIMBAL_ROTATE_SPEED_MSG_LEN (SIYI_HEADER_SZ + SIYI_CRC_SZ + 2)
 #define SIYI_GIMBAL_ROTATE_MSG_LEN (SIYI_HEADER_SZ + SIYI_CRC_SZ + 4)
 #define SIYI_GIMBAL_NEUTRAL_MSG_LEN (SIYI_HEADER_SZ + SIYI_CRC_SZ + 1)
@@ -96,10 +96,10 @@ static uint8_t *siyi_cam_pack_common(uint8_t *buf,
     return &buf[8];
 }
 
-void siyi_cam_manual_focus(int8_t zoom, uint16_t zoom_ratio)
+void siyi_cam_manual_focus(int8_t zoom)
 {
     uint8_t buf[SIYI_FOCUS_MSG_LEN] = {0};
-    uint8_t *payload = siyi_cam_pack_common(buf, false, 3, 0, 0x05);
+    uint8_t *payload = siyi_cam_pack_common(buf, false, 1, 0, 0x05);
 
     /* Zoom mode */
     switch (zoom) {
@@ -117,12 +117,9 @@ void siyi_cam_manual_focus(int8_t zoom, uint16_t zoom_ratio)
         return;
     }
 
-    /* Zoom ratio */
-    memcpy(&payload[1], &zoom_ratio, sizeof(zoom_ratio));
-
     /* CRC */
     uint16_t crc16 = crc16_calculate(buf, SIYI_FOCUS_MSG_LEN - 2);
-    memcpy(&payload[3], &crc16, sizeof(crc16));
+    memcpy(&payload[1], &crc16, sizeof(crc16));
 
     /* Send out the message */
     send(siyi_cam_fd, buf, sizeof(buf), 0);
