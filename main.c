@@ -705,7 +705,7 @@ int run_uart_server(int argc, char const *argv[])
                 SerialFd serial =
                     serial_open(argv[ARGS_SERIAL_PORT], &cfg, SERIAL_TIMEOUT);
 
-                siyi_cam_gimbal_rotate_neutral();
+                siyi_cam_gimbal_centering();
 
                 if (serial == SERIAL_INVALID_FD) {
                     error("Failed to open the requested serial port");

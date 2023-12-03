@@ -183,7 +183,7 @@ void siyi_cam_gimbal_rotate(int16_t yaw, int16_t pitch)
     send(siyi_cam_fd, buf, sizeof(buf), 0);
 }
 
-void siyi_cam_gimbal_rotate_neutral(void)
+void siyi_cam_gimbal_centering(void)
 {
     uint8_t buf[SIYI_GIMBAL_NEUTRAL_MSG_LEN] = {0};
     uint8_t *payload = siyi_cam_pack_common(buf, false, 1, 0, 0x08);
