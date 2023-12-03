@@ -16,6 +16,7 @@
 #define SIYI_CRC_SZ 2
 
 #define SIYI_FOCUS_MSG_LEN (SIYI_HEADER_SZ + SIYI_CRC_SZ + 1)
+#define SIYI_ZOOM_MSG_LEN (SIYI_HEADER_SZ + SIYI_CRC_SZ + 2)
 #define SIYI_GIMBAL_ROTATE_SPEED_MSG_LEN (SIYI_HEADER_SZ + SIYI_CRC_SZ + 2)
 #define SIYI_GIMBAL_ROTATE_MSG_LEN (SIYI_HEADER_SZ + SIYI_CRC_SZ + 4)
 #define SIYI_GIMBAL_NEUTRAL_MSG_LEN (SIYI_HEADER_SZ + SIYI_CRC_SZ + 1)
@@ -103,13 +104,13 @@ void siyi_cam_manual_focus(int8_t zoom)
 
     /* Zoom mode */
     switch (zoom) {
-    case SIYI_CAM_ZOOM_IN:
+    case SIYI_CAM_FOCUS_IN:
         ((int8_t *) payload)[0] = 1;
         break;
-    case SIYI_CAM_ZOOM_OUT:
+    case SIYI_CAM_FOCUS_OUT:
         ((int8_t *) payload)[0] = -1;
         break;
-    case SIYI_CAM_ZOOM_STOP:
+    case SIYI_CAM_FOCUS_STOP:
         ((int8_t *) payload)[0] = 0;
         break;
     default:
@@ -120,6 +121,25 @@ void siyi_cam_manual_focus(int8_t zoom)
     /* CRC */
     uint16_t crc16 = crc16_calculate(buf, SIYI_FOCUS_MSG_LEN - 2);
     memcpy(&payload[1], &crc16, sizeof(crc16));
+
+    /* Send out the message */
+    send(siyi_cam_fd, buf, sizeof(buf), 0);
+}
+
+void siyi_cam_manual_zoom(uint8_t zoom_integer, uint8_t zoom_decimal)
+{
+    uint8_t buf[SIYI_ZOOM_MSG_LEN] = {0};
+    uint8_t *payload = siyi_cam_pack_common(buf, false, 2, 0, 0x0f);
+
+    /* Set integer part of the camera zoom ratio */
+    payload[0] = zoom_integer;
+
+    /* Set decimal place of the camera zoom ratio */
+    payload[1] = zoom_decimal;
+
+    /* CRC */
+    uint16_t crc16 = crc16_calculate(buf, SIYI_ZOOM_MSG_LEN - 2);
+    memcpy(&payload[2], &crc16, sizeof(crc16));
 
     /* Send out the message */
     send(siyi_cam_fd, buf, sizeof(buf), 0);

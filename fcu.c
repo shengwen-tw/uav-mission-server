@@ -148,15 +148,15 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
 
     /* Handle scroll button */
     if (scroll <= RC_SCROLL_MIN) {
-        siyi_cam_manual_focus(SIYI_CAM_ZOOM_OUT);
+        siyi_cam_manual_focus(SIYI_CAM_FOCUS_OUT);
         focus_stop = true;
         printf("Zoom out\n");
     } else if (scroll >= RC_SCROLL_MAX) {
-        siyi_cam_manual_focus(SIYI_CAM_ZOOM_IN);
+        siyi_cam_manual_focus(SIYI_CAM_FOCUS_IN);
         focus_stop = true;
         printf("Zoom in\n");
     } else if (focus_stop) {
-        siyi_cam_manual_focus(SIYI_CAM_ZOOM_STOP);
+        siyi_cam_manual_focus(SIYI_CAM_FOCUS_STOP);
         focus_stop = false;
     }
 
