@@ -102,8 +102,8 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
 {
 #define INC 0.3
 
-    mavlink_rc_channels_raw_t rc_channels_raw;
-    mavlink_msg_rc_channels_raw_decode(recvd_msg, &rc_channels_raw);
+    mavlink_rc_channels_t rc_channels;
+    mavlink_msg_rc_channels_decode(recvd_msg, &rc_channels);
 
     static float cam_yaw = 0;
     static float cam_pitch = 0;
@@ -111,12 +111,12 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
     static bool focus_stop = false;
 
     /* Map RC signals to [-100, 100] */
-    float rc_yaw = ((float) rc_channels_raw.chan1_raw - RC_YAW_MID) /
+    float rc_yaw = ((float) rc_channels.chan1_raw - RC_YAW_MID) /
                    (RC_YAW_MAX - RC_YAW_MIN) * 200;
-    float rc_pitch = ((float) rc_channels_raw.chan2_raw - RC_PITCH_MID) /
+    float rc_pitch = ((float) rc_channels.chan2_raw - RC_PITCH_MID) /
                      (RC_PITCH_MAX - RC_PITCH_MIN) * 200;
-    uint16_t button_a = rc_channels_raw.chan5_raw;
-    uint16_t scroll = rc_channels_raw.chan6_raw;
+    uint16_t button_a = rc_channels.chan5_raw;
+    uint16_t scroll = rc_channels.chan6_raw;
 
     /* Reverse directions */
     rc_yaw *= -1;
@@ -148,11 +148,11 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
 
     /* Handle scroll button */
     if (scroll <= RC_SCROLL_MIN) {
-        siyi_cam_manual_focus(SIYI_CAM_FOCUS_OUT);
+        siyi_cam_manual_zoom(5, 0);
         focus_stop = true;
         printf("Zoom out\n");
     } else if (scroll >= RC_SCROLL_MAX) {
-        siyi_cam_manual_focus(SIYI_CAM_FOCUS_IN);
+        siyi_cam_manual_zoom(0, 0);
         focus_stop = true;
         printf("Zoom in\n");
     } else if (focus_stop) {
