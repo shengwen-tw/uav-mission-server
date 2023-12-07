@@ -4,6 +4,7 @@
 #include "common.h"
 #include "mavlink.h"
 #include "mavlink_parser.h"
+#include "rtsp_stream.h"
 #include "siyi_camera.h"
 #include "util.h"
 
@@ -108,6 +109,7 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
     static float cam_yaw = 0;
     static float cam_pitch = 0;
     static uint16_t button_a_last = 0;
+    static uint16_t button_snapshot_last = 0;
     static bool focus_stop = false;
 
     /* Map RC signals to [-100, 100] */
@@ -116,17 +118,27 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
     float rc_pitch = ((float) rc_channels.chan2_raw - RC_PITCH_MID) /
                      (RC_PITCH_MAX - RC_PITCH_MIN) * 200;
     uint16_t button_a = rc_channels.chan5_raw;
+    uint16_t button_snapshot = rc_channels.chan13_raw;
     uint16_t scroll = rc_channels.chan6_raw;
+
+    /* Initialization */
+    if (button_a_last == 0)
+        button_a_last = button_a;
+
+    if (button_snapshot_last == 0)
+        button_snapshot_last = button_snapshot;
 
     /* Reverse directions */
     rc_yaw *= -1;
     rc_pitch *= -1;
 
+#if 0
     printf(
-        "[A]: %u, scroll: %u, cam-yaw: %f, cam-pitch: %f, rc-yaw: %f, "
+        "[A]: %u, snapshot:%d, scroll: %u, cam-yaw: %f, cam-pitch: %f, rc-yaw: %f, "
         "rc-pitch: "
         "%f\n",
-        button_a, scroll, cam_yaw, cam_pitch, rc_yaw, rc_pitch);
+        button_a, button_snapshot, scroll, cam_yaw, cam_pitch, rc_yaw, rc_pitch);
+#endif
 
     /* Increase the control signals */
     if (fabsf(rc_yaw) > 50.0f)
@@ -146,23 +158,26 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
         cam_pitch = 0.0f;
     }
 
+    if (button_snapshot != button_snapshot_last) {
+        button_snapshot_last = button_snapshot;
+        gstreamer_take_photo();
+    }
+
     /* Handle scroll button */
     if (scroll <= RC_SCROLL_MIN) {
-        siyi_cam_manual_zoom(5, 0);
+        siyi_cam_manual_zoom(0x1e, 0);
         focus_stop = true;
         printf("Zoom out\n");
     } else if (scroll >= RC_SCROLL_MAX) {
-        siyi_cam_manual_zoom(0, 0);
+        siyi_cam_manual_zoom(0x01, 0);
         focus_stop = true;
         printf("Zoom in\n");
     } else if (focus_stop) {
-        siyi_cam_manual_focus(SIYI_CAM_FOCUS_STOP);
         focus_stop = false;
     }
 
     /* Send camera control signal */
-    siyi_cam_gimbal_rotate((int16_t) (cam_yaw * 10),
-                           (int16_t) (cam_pitch * 10));
+    siyi_cam_gimbal_rotate((int16_t)(cam_yaw * 10), (int16_t)(cam_pitch * 10));
 }
 
 void mav_fcu_autopilot_version(mavlink_message_t *recvd_msg)

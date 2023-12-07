@@ -3,6 +3,7 @@
  */
 
 #include <ctype.h>
+#include <pthread.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -615,6 +616,7 @@ static void sig_handler(int sig)
 {
     switch (sig) {
     case SIGINT:
+        exit(0);
     case SIGABRT:
     case SIGTERM: {
         char b = '\0';
@@ -663,8 +665,13 @@ void wait_serial_flushing_complete(SerialFd sport)
     fcu_read_mavlink_msg(g_cache, rbytes);
 }
 
-int run_uart_server(int argc, char const *argv[])
+int g_argc;
+char **g_argv;
+void *run_uart_server(void *args)
 {
+    int argc = g_argc;
+    char **argv = g_argv;
+
     int ret_val = EXIT_FAILURE;
 
     unsigned port = DEFAULT_PORT;
@@ -845,7 +852,7 @@ int run_uart_server(int argc, char const *argv[])
         }
     }
 
-    return ret_val;
+    exit(ret_val);
 }
 
 void send_signal(int signo)
@@ -857,27 +864,6 @@ void send_signal(int signo)
 #define CMD_FIFO "/tmp/cmd_fifo"
 int main(int argc, char const *argv[])
 {
-#define TEST_SELECT 4
-
-#if (TEST_SELECT == 0)
-#elif (TEST_SELECT == 1)
-    /* GStreamer streaming test */
-    rtsp_stream_display();
-    return 0;
-#elif (TEST_SELECT == 2)
-    /* GStreamer JPEG saving test */
-    rtsp_jpeg_saver();
-    return 0;
-#elif (TEST_SELECT == 3)
-    /* GStreamer MP4 saving test */
-    rtsp_mp4_saver();
-    return 0;
-#endif
-
-#if 0
-    rtsp_stream_init();
-#endif
-
     int ret_val = EXIT_FAILURE;
 
     if (argc == 2) {
@@ -924,7 +910,16 @@ int main(int argc, char const *argv[])
         }
 
         /* start the service */
-        ret_val = run_uart_server(argc, argv);
+        g_argc = argc;
+        g_argv = (char **) argv;
+        pthread_t uart_server_tid;
+        pthread_create(&uart_server_tid, NULL, run_uart_server, NULL);
+
+        pthread_t gstreamer_tid;
+        pthread_create(&gstreamer_tid, NULL, rtsp_jpeg_saver, NULL);
+
+        pthread_join(uart_server_tid, NULL);
+        pthread_join(gstreamer_tid, NULL);
     }
 
     return ret_val;

@@ -1,9 +1,10 @@
+#include <stdbool.h>
 #include <stdio.h>
 
 #include <glib.h>
 #include <gst/gst.h>
 
-#define RTSP_STREAM_URL "rtsp://10.20.13.115:8900/live"
+#define RTSP_STREAM_URL "rtsp://10.20.13.136:8900/live"
 #define VIDEO_FORMAT "video/x-raw"
 #define FRAME_WIDTH 1280
 #define FRAME_HEIGHT 720
@@ -36,13 +37,22 @@ static void pad_added_handler(GstElement *src, GstPad *pad, gst_data_t *data)
         printf("Failed to link pad and signal\n");
 }
 
+bool snapshot_request = false;
+
+void gstreamer_take_photo(void)
+{
+    snapshot_request = true;
+}
+
 static void on_new_sample_handler(GstElement *sink, gpointer data)
 {
     /* Retrieve the frame data */
     GstSample *sample;
     g_signal_emit_by_name(sink, "pull-sample", &sample, NULL);
 
-    if (sample) {
+    if (sample && snapshot_request) {
+        snapshot_request = false;
+
         /* Obtain the JPEG image data */
         GstBuffer *buffer = gst_sample_get_buffer(sample);
         GstMapInfo map;
@@ -53,6 +63,8 @@ static void on_new_sample_handler(GstElement *sink, gpointer data)
         g_snprintf(filename, sizeof(filename), "frame%d.jpg",
                    0 /* TODO: timestamp */);
         FILE *file = fopen(filename, "wb");
+
+        printf("Photo saved!\n");
         fwrite(map.data, 1, map.size, file);
         fclose(file);
 
@@ -62,7 +74,7 @@ static void on_new_sample_handler(GstElement *sink, gpointer data)
     }
 }
 
-int rtsp_jpeg_saver(void)
+void *rtsp_jpeg_saver(void *args)
 {
     gst_init(NULL, NULL);
 
@@ -84,7 +96,7 @@ int rtsp_jpeg_saver(void)
         !data.decoder || !data.convert || !data.scale || !data.encoder ||
         !data.sink) {
         printf("Failed to create one or multiple gst elements\n");
-        return -1;
+        return NULL;
     }
 
     /* clang-format off */
@@ -114,19 +126,19 @@ int rtsp_jpeg_saver(void)
                                data.convert, data.scale, NULL)) {
         g_printerr("Failed to link elements (Stage 1)\n");
         gst_object_unref(pipeline);
-        return -1;
+        return NULL;
     }
 
     if (!gst_element_link_filtered(data.scale, data.encoder, caps)) {
         g_printerr("Failed to link elements (Stage 2)\n");
         gst_object_unref(pipeline);
-        return -1;
+        return NULL;
     }
 
     if (!gst_element_link_many(data.encoder, data.sink, NULL)) {
         g_printerr("Failed to link elements (Stage 3)\n");
         gst_object_unref(pipeline);
-        return -1;
+        return NULL;
     }
 
     /* Attach signal handlers */
@@ -150,7 +162,9 @@ int rtsp_jpeg_saver(void)
     gst_element_set_state(pipeline, GST_STATE_NULL);
     gst_object_unref(pipeline);
 
-    return 0;
+    printf("gstreamer: Bye\n");
+
+    return NULL;
 }
 
 GstElement *pipeline;
@@ -309,9 +323,4 @@ int rtsp_stream_display(void)
     gst_object_unref(pipeline);
 
     return 0;
-}
-
-void rtsp_stream_init(void)
-{
-    rtsp_jpeg_saver();
 }
