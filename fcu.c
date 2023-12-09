@@ -119,7 +119,7 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
                      (RC_PITCH_MAX - RC_PITCH_MIN) * 200;
     uint16_t button_a = rc_channels.chan5_raw;
     uint16_t button_snapshot = rc_channels.chan13_raw;
-    uint16_t scroll = rc_channels.chan6_raw;
+    uint16_t zoom = rc_channels.chan9_raw;
 
     /* Initialization */
     if (button_a_last == 0)
@@ -134,10 +134,10 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
 
 #if 0
     printf(
-        "[A]: %u, snapshot:%d, scroll: %u, cam-yaw: %f, cam-pitch: %f, rc-yaw: %f, "
+        "[A]: %u, snapshot:%d, zoom: %u, cam-yaw: %f, cam-pitch: %f, rc-yaw: %f, "
         "rc-pitch: "
         "%f\n",
-        button_a, button_snapshot, scroll, cam_yaw, cam_pitch, rc_yaw, rc_pitch);
+        button_a, button_snapshot, zoom, cam_yaw, cam_pitch, rc_yaw, rc_pitch);
 #endif
 
     /* Increase the control signals */
@@ -163,12 +163,12 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
         gstreamer_take_photo();
     }
 
-    /* Handle scroll button */
-    if (scroll <= RC_SCROLL_MIN) {
+    /* Handle zoom button */
+    if (zoom <= RC_SCROLL_MIN) {
         siyi_cam_manual_zoom(0x1e, 0);
         focus_stop = true;
         printf("Zoom out\n");
-    } else if (scroll >= RC_SCROLL_MAX) {
+    } else if (zoom >= RC_SCROLL_MAX) {
         siyi_cam_manual_zoom(0x01, 0);
         focus_stop = true;
         printf("Zoom in\n");
