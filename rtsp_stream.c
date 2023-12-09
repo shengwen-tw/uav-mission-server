@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stdio.h>
+#include <time.h>
 
 #include <glib.h>
 #include <gst/gst.h>
@@ -44,6 +45,25 @@ void gstreamer_take_photo(void)
     snapshot_request = true;
 }
 
+void generate_timestamp(char *timestamp)
+{
+    /* Size of the timestamp string:
+     * 4 (year) + 2 (month) + 2 (day) + 2 (hour) + 2 (minute) +
+     * 2 (second) + 1 (null terminator)
+     */
+
+    /* Get current time */
+    time_t rawtime;
+    struct tm *timeinfo;
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+
+    /* Format the timestamp string */
+    sprintf(timestamp, "%04d%02d%02d%02d%02d%02d", 1900 + timeinfo->tm_year,
+            1 + timeinfo->tm_mon, timeinfo->tm_mday, timeinfo->tm_hour,
+            timeinfo->tm_min, timeinfo->tm_sec);
+}
+
 static void on_new_sample_handler(GstElement *sink, gpointer data)
 {
     /* Retrieve the frame data */
@@ -58,10 +78,12 @@ static void on_new_sample_handler(GstElement *sink, gpointer data)
         GstMapInfo map;
         gst_buffer_map(buffer, &map, GST_MAP_READ);
 
+        char timestamp[15] = {0};
+        generate_timestamp(timestamp);
+
         /* Save JPEG data to file */
         gchar filename[50];
-        g_snprintf(filename, sizeof(filename), "frame%d.jpg",
-                   0 /* TODO: timestamp */);
+        g_snprintf(filename, sizeof(filename), "%s.jpg", timestamp);
         FILE *file = fopen(filename, "wb");
 
         printf("Photo saved!\n");
