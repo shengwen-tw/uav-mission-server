@@ -15,7 +15,6 @@
 #define SIYI_HEADER_SZ 8
 #define SIYI_CRC_SZ 2
 
-#define SIYI_FOCUS_MSG_LEN (SIYI_HEADER_SZ + SIYI_CRC_SZ + 1)
 #define SIYI_ZOOM_MSG_LEN (SIYI_HEADER_SZ + SIYI_CRC_SZ + 2)
 #define SIYI_GIMBAL_ROTATE_SPEED_MSG_LEN (SIYI_HEADER_SZ + SIYI_CRC_SZ + 2)
 #define SIYI_GIMBAL_ROTATE_MSG_LEN (SIYI_HEADER_SZ + SIYI_CRC_SZ + 4)
@@ -95,35 +94,6 @@ static uint8_t *siyi_cam_pack_common(uint8_t *buf,
 
     /* Return the pointer of the payload */
     return &buf[8];
-}
-
-void siyi_cam_manual_focus(int8_t zoom)
-{
-    uint8_t buf[SIYI_FOCUS_MSG_LEN] = {0};
-    uint8_t *payload = siyi_cam_pack_common(buf, false, 1, 0, 0x05);
-
-    /* Zoom mode */
-    switch (zoom) {
-    case SIYI_CAM_FOCUS_IN:
-        ((int8_t *) payload)[0] = 1;
-        break;
-    case SIYI_CAM_FOCUS_OUT:
-        ((int8_t *) payload)[0] = -1;
-        break;
-    case SIYI_CAM_FOCUS_STOP:
-        ((int8_t *) payload)[0] = 0;
-        break;
-    default:
-        printf("%s(): Invalid zoom mode argument %d\n", __func__, zoom);
-        return;
-    }
-
-    /* CRC */
-    uint16_t crc16 = crc16_calculate(buf, SIYI_FOCUS_MSG_LEN - 2);
-    memcpy(&payload[1], &crc16, sizeof(crc16));
-
-    /* Send out the message */
-    send(siyi_cam_fd, buf, sizeof(buf), 0);
 }
 
 void siyi_cam_manual_zoom(uint8_t zoom_integer, uint8_t zoom_decimal)
