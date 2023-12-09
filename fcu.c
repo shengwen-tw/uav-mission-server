@@ -177,7 +177,8 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
     }
 
     /* Send camera control signal */
-    siyi_cam_gimbal_rotate((int16_t)(cam_yaw * 10), (int16_t)(cam_pitch * 10));
+    siyi_cam_gimbal_rotate((int16_t) (cam_yaw * 10),
+                           (int16_t) (cam_pitch * 10));
 }
 
 void mav_fcu_autopilot_version(mavlink_message_t *recvd_msg)
