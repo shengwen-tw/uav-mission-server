@@ -30,6 +30,9 @@ CFLAGS += -D MASTER_PID_FILE="\"/tmp/uart-server.pid\""
 CFLAGS += $(shell pkg-config --cflags gstreamer-1.0)
 LDFLAGS += $(shell pkg-config --libs gstreamer-1.0)
 
+# libyaml
+LDFLAGS += -lyaml
+
 TARGET = uart-server
 
 SRCS := \
@@ -40,7 +43,8 @@ SRCS := \
 	mavlink_parser.c \
 	mavlink_publisher.c \
         siyi_camera.c \
-        rtsp_stream.c
+        rtsp_stream.c \
+        config.c
 
 all: $(TARGET)
 

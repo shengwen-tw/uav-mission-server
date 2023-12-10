@@ -5,6 +5,10 @@ client (in a FIFO fashion) can also send data to the serial port.
 
 ## Build
 
+```
+sudo apt-get install libyaml-dev
+```
+
 [future](https://pypi.org/project/future/) is required to generate MAVLink headers.
 ```shell
 pip3 install future
