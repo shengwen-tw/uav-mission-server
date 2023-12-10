@@ -713,6 +713,7 @@ void *run_uart_server(void *args)
                     serial_open(argv[ARGS_SERIAL_PORT], &cfg, SERIAL_TIMEOUT);
 
                 siyi_cam_gimbal_centering();
+                siyi_cam_manual_zoom(0x01, 0);
 
                 if (serial == SERIAL_INVALID_FD) {
                     error("Failed to open the requested serial port");

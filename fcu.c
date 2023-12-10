@@ -167,11 +167,11 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
     if (zoom <= RC_SCROLL_MIN) {
         siyi_cam_manual_zoom(0x1e, 0);
         focus_stop = true;
-        printf("Zoom out\n");
+        printf("Zoom in\n");
     } else if (zoom >= RC_SCROLL_MAX) {
         siyi_cam_manual_zoom(0x01, 0);
         focus_stop = true;
-        printf("Zoom in\n");
+        printf("Zoom out\n");
     } else if (focus_stop) {
         focus_stop = false;
     }
