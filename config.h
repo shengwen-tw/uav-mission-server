@@ -7,4 +7,7 @@ typedef struct {
 
 void load_siyi_configs(char *yaml_path, config_siyi_cam *config_data);
 
+char *get_camera_vendor_name(void);
+char *get_camera_model_name(void);
+
 #endif

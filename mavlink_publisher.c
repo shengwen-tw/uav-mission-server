@@ -1,4 +1,5 @@
 #include <math.h>
+#include "config.h"
 #include "mavlink.h"
 #include "serial.h"
 #include "util.h"
@@ -151,8 +152,8 @@ void mavlink_send_camera_info(int fd)
     uint8_t component_id = MAV_COMP_ID_ONBOARD_COMPUTER;
 
     uint32_t time_boot_ms = 0;
-    uint8_t *vendor_name = (uint8_t *) "K-Tri Technology";
-    uint8_t *model_name = (uint8_t *) "KTG";
+    uint8_t *vendor_name = (uint8_t *) get_camera_vendor_name();
+    uint8_t *model_name = (uint8_t *) get_camera_model_name();
     uint32_t firmware_version = 0;  // 0 if unknown
     float focal_length = 0;         // mm, NaN if unknown
     float sensor_size_h = 0;        // mm, NaN if unknown

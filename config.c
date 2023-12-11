@@ -4,6 +4,17 @@
 
 #include "config.h"
 
+static char *camera_vendor_list[] = {
+    "SIYI",
+};
+
+static char *camera_model_list[] = {
+    "A8-Mini",
+};
+
+static int camera_vendor_idx = 0;
+static int camera_model_idx = 0;
+
 void load_siyi_configs(char *yaml_path, config_siyi_cam *config_data)
 {
     yaml_parser_t parser;
@@ -59,4 +70,14 @@ void load_siyi_configs(char *yaml_path, config_siyi_cam *config_data)
     fclose(file);
     yaml_parser_delete(&parser);
     yaml_event_delete(&event);
+}
+
+char *get_camera_vendor_name(void)
+{
+    return camera_vendor_list[camera_vendor_idx];
+}
+
+char *get_camera_model_name(void)
+{
+    return camera_model_list[camera_model_idx];
 }
