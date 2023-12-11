@@ -160,7 +160,7 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
 
     if (button_snapshot != button_snapshot_last) {
         button_snapshot_last = button_snapshot;
-        gstreamer_take_photo();
+        rtsp_stream_save_image();
     }
 
     /* Handle zoom button */

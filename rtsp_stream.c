@@ -11,21 +11,41 @@
 #define FRAME_HEIGHT 720
 
 typedef struct {
+    /* RTSP source */
     GstElement *source;
-    GstElement *depay;
-    GstElement *parse;
-    GstElement *decoder;
-    GstElement *convert;
-    GstElement *scale;
-    GstElement *encoder;
-    GstElement *mux;
-    GstElement *sink;
+
+    /* Branch */
+    GstElement *tee;
+
+    /* JPEG saving pipeline */
+    GstElement *jpg_queue;
+    GstElement *jpg_depay;
+    GstElement *jpg_parse;
+    GstElement *jpg_decoder;
+    GstElement *jpg_convert;
+    GstElement *jpg_scale;
+    GstElement *jpg_encoder;
+    GstElement *jpg_sink;
+
+    /* MP4 saving pipeline */
+    GstElement *mp4_queue;
+    GstElement *mp4_depay;
+    GstElement *mp4_parse;
+    GstElement *mp4_decoder;
+    GstElement *mp4_convert;
+    GstElement *mp4_scale;
+    GstElement *mp4_encoder;
+    GstElement *mp4_mux;
+    GstElement *mp4_sink;
 } gst_data_t;
+
+static GstElement *pipeline;
+static bool snapshot_request = false;
 
 static void pad_added_handler(GstElement *src, GstPad *pad, gst_data_t *data)
 {
     /* Get the sink pad */
-    GstPad *sink_pad = gst_element_get_static_pad(data->depay, "sink");
+    GstPad *sink_pad = gst_element_get_static_pad(data->tee, "sink");
 
     /* Ignore if pad is already lined with the signal */
     if (gst_pad_is_linked(sink_pad)) {
@@ -38,9 +58,7 @@ static void pad_added_handler(GstElement *src, GstPad *pad, gst_data_t *data)
         printf("Failed to link pad and signal\n");
 }
 
-bool snapshot_request = false;
-
-void gstreamer_take_photo(void)
+void rtsp_stream_save_image(void)
 {
     snapshot_request = true;
 }
@@ -49,7 +67,7 @@ void generate_timestamp(char *timestamp)
 {
     /* Size of the timestamp string:
      * 4 (year) + 2 (month) + 2 (day) + 2 (hour) + 2 (minute) +
-     * 2 (second) + 1 (null terminator)
+     * 2 (second) + 1 (null terminator) = 15
      */
 
     /* Get current time */
@@ -73,7 +91,7 @@ static void on_new_sample_handler(GstElement *sink, gpointer data)
     if (sample && snapshot_request) {
         snapshot_request = false;
 
-        /* Obtain the JPEG image data */
+        /* Obtain JPEG data */
         GstBuffer *buffer = gst_sample_get_buffer(sample);
         GstMapInfo map;
         gst_buffer_map(buffer, &map, GST_MAP_READ);
@@ -81,7 +99,7 @@ static void on_new_sample_handler(GstElement *sink, gpointer data)
         char timestamp[15] = {0};
         generate_timestamp(timestamp);
 
-        /* Save JPEG data to file */
+        /* Save JPEG file */
         gchar filename[50];
         g_snprintf(filename, sizeof(filename), "%s.jpg", timestamp);
         FILE *file = fopen(filename, "wb");
@@ -96,27 +114,54 @@ static void on_new_sample_handler(GstElement *sink, gpointer data)
     }
 }
 
-void *rtsp_jpeg_saver(void *args)
+void rtsp_stream_handle_eos(void)
+{
+    static bool end = false;
+
+    if (!end) {
+        end = true;
+        printf("Sending end-of-stream (EoS), wait for termination...\n");
+        gst_element_send_event(pipeline, gst_event_new_eos());
+    }
+}
+
+void *rtsp_stream_saver(void *args)
 {
     gst_init(NULL, NULL);
 
     /* Create pipeline */
-    GstElement *pipeline = gst_pipeline_new("rtsp-streaming-pipeline");
+    pipeline = gst_pipeline_new("rtsp-pipeline");
 
     /* Create elements */
     gst_data_t data;
     data.source = gst_element_factory_make("rtspsrc", "source");
-    data.depay = gst_element_factory_make("rtph264depay", "depay");
-    data.parse = gst_element_factory_make("h264parse", "parse");
-    data.decoder = gst_element_factory_make("avdec_h264", "decoder");
-    data.convert = gst_element_factory_make("videoconvert", "convert");
-    data.scale = gst_element_factory_make("videoscale", "scale");
-    data.encoder = gst_element_factory_make("jpegenc", "encoder");
-    data.sink = gst_element_factory_make("appsink", "sink");
+    data.tee = gst_element_factory_make("tee", "tee");
 
-    if (!pipeline || !data.source || !data.depay || !data.parse ||
-        !data.decoder || !data.convert || !data.scale || !data.encoder ||
-        !data.sink) {
+    data.jpg_queue = gst_element_factory_make("queue", "jpg_queue");
+    data.jpg_depay = gst_element_factory_make("rtph264depay", "jpg_depay");
+    data.jpg_parse = gst_element_factory_make("h264parse", "jpg_parse");
+    data.jpg_decoder = gst_element_factory_make("avdec_h264", "jpg_decoder");
+    data.jpg_convert = gst_element_factory_make("videoconvert", "jpg_convert");
+    data.jpg_scale = gst_element_factory_make("videoscale", "jpg_scale");
+    data.jpg_encoder = gst_element_factory_make("jpegenc", "jpg_encoder");
+    data.jpg_sink = gst_element_factory_make("appsink", "jpg_sink");
+
+    data.mp4_queue = gst_element_factory_make("queue", "mp4_queue");
+    data.mp4_depay = gst_element_factory_make("rtph264depay", "mp4_depay");
+    data.mp4_parse = gst_element_factory_make("h264parse", "mp4_parse");
+    data.mp4_decoder = gst_element_factory_make("avdec_h264", "mp4_decoder");
+    data.mp4_convert = gst_element_factory_make("videoconvert", "mp4_convert");
+    data.mp4_scale = gst_element_factory_make("videoscale", "mp4_scale");
+    data.mp4_encoder = gst_element_factory_make("x264enc", "encoder");
+    data.mp4_mux = gst_element_factory_make("mp4mux", "multiplexer");
+    data.mp4_sink = gst_element_factory_make("filesink", "sink");
+
+    if (!data.source || !data.tee || !data.jpg_queue || !data.jpg_depay ||
+        !data.jpg_parse || !data.jpg_decoder || !data.jpg_convert ||
+        !data.jpg_scale || !data.jpg_encoder || !data.jpg_sink ||
+        !data.mp4_queue || !data.mp4_depay || !data.mp4_parse ||
+        !data.mp4_decoder || !data.mp4_convert || !data.mp4_scale ||
+        !data.mp4_encoder || !data.mp4_mux || !data.mp4_sink) {
         printf("Failed to create one or multiple gst elements\n");
         return NULL;
     }
@@ -127,38 +172,45 @@ void *rtsp_jpeg_saver(void *args)
                             "width", G_TYPE_INT, FRAME_WIDTH,
                             "height", G_TYPE_INT, FRAME_HEIGHT,
                             NULL);
-    /* clang-format on */
 
-    /* clang-format off */
     g_object_set(G_OBJECT(data.source),
                  "location", RTSP_STREAM_URL,
                  "latency", 0,
                  NULL);
     /* clang-format on */
-    g_object_set(G_OBJECT(data.encoder), "quality", 90, NULL);
-    g_object_set(G_OBJECT(data.sink), "emit-signals", TRUE, NULL);
 
-    /* Add all elements into the pipe line */
-    gst_bin_add_many(GST_BIN(pipeline), data.source, data.depay, data.parse,
-                     data.decoder, data.convert, data.scale, data.encoder,
-                     data.sink, NULL);
+    /* Add all elements into the pipeline */
+    gst_bin_add_many(
+        GST_BIN(pipeline), data.source, data.tee, data.jpg_queue,
+        data.jpg_depay, data.jpg_parse, data.jpg_decoder, data.jpg_convert,
+        data.jpg_scale, data.jpg_encoder, data.jpg_sink, data.mp4_queue,
+        data.mp4_depay, data.mp4_parse, data.mp4_decoder, data.mp4_convert,
+        data.mp4_scale, data.mp4_encoder, data.mp4_mux, data.mp4_sink, NULL);
 
-    /* Link all elements in the pipeline */
-    if (!gst_element_link_many(data.depay, data.parse, data.decoder,
-                               data.convert, data.scale, NULL)) {
-        g_printerr("Failed to link elements (Stage 1)\n");
+    /*====================*
+     * JPEG saving branch *
+     *====================*/
+
+    g_object_set(G_OBJECT(data.jpg_encoder), "quality", 90, NULL);
+    g_object_set(G_OBJECT(data.jpg_sink), "emit-signals", TRUE, NULL);
+
+    /* Link JPEG saving branch */
+    if (!gst_element_link_many(data.tee, data.jpg_queue, data.jpg_depay,
+                               data.jpg_parse, data.jpg_decoder,
+                               data.jpg_convert, data.jpg_scale, NULL)) {
+        g_printerr("Failed to link elements (JPEG stage 1)\n");
         gst_object_unref(pipeline);
         return NULL;
     }
 
-    if (!gst_element_link_filtered(data.scale, data.encoder, caps)) {
-        g_printerr("Failed to link elements (Stage 2)\n");
+    if (!gst_element_link_filtered(data.jpg_scale, data.jpg_encoder, caps)) {
+        g_printerr("Failed to link elements (JPEG stage 2)\n");
         gst_object_unref(pipeline);
         return NULL;
     }
 
-    if (!gst_element_link_many(data.encoder, data.sink, NULL)) {
-        g_printerr("Failed to link elements (Stage 3)\n");
+    if (!gst_element_link_many(data.jpg_encoder, data.jpg_sink, NULL)) {
+        g_printerr("Failed to link elements (JPEG stage 3)\n");
         gst_object_unref(pipeline);
         return NULL;
     }
@@ -166,183 +218,47 @@ void *rtsp_jpeg_saver(void *args)
     /* Attach signal handlers */
     g_signal_connect(data.source, "pad-added", G_CALLBACK(pad_added_handler),
                      &data);
-    g_signal_connect(data.sink, "new-sample", G_CALLBACK(on_new_sample_handler),
-                     NULL);
+    g_signal_connect(data.jpg_sink, "new-sample",
+                     G_CALLBACK(on_new_sample_handler), NULL);
 
-    /* Start GStreamer */
+    /*===================*
+     * MP4 Saving branch *
+     *===================*/
+
+    g_object_set(G_OBJECT(data.mp4_sink), "location", "record.mp4", NULL);
+    g_object_set(G_OBJECT(data.mp4_encoder), "tune", 0x00000004, NULL);
+
+    /* Link MP4 saving branch */
+    if (!gst_element_link_many(
+            data.tee, data.mp4_queue, data.mp4_depay, data.mp4_parse,
+            data.mp4_decoder, data.mp4_convert, data.mp4_scale,
+            data.mp4_encoder, data.mp4_mux, data.mp4_sink, NULL)) {
+        g_printerr("Failed to link elements (MP4 stage 1)\n");
+        gst_object_unref(pipeline);
+        return NULL;
+    }
+
+    /*=================*
+     * Start GStreamer *
+     *=================*/
+
     gst_element_set_state(pipeline, GST_STATE_PLAYING);
 
-    printf("gstreamer: Start playing...\n");
+    printf("GStreamer: Start playing...\n");
 
     /* Wait until received error or EOS message */
     GstBus *bus = gst_element_get_bus(pipeline);
     gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE,
                                GST_MESSAGE_ERROR | GST_MESSAGE_EOS);
 
+    printf("GStreamer: Bye!\n");
+
     /* Free resources */
     gst_object_unref(bus);
     gst_element_set_state(pipeline, GST_STATE_NULL);
     gst_object_unref(pipeline);
 
-    printf("gstreamer: Bye\n");
+    exit(0);  // XXX
 
     return NULL;
-}
-
-GstElement *pipeline;
-
-void sigintHandler(int unused)
-{
-    g_print("Sending EoS");
-    gst_element_send_event(pipeline, gst_event_new_eos());
-}
-
-int rtsp_mp4_saver(void)
-{
-    signal(SIGINT, sigintHandler);
-
-    gst_init(NULL, NULL);
-
-    /* Create pipeline */
-    pipeline = gst_pipeline_new("rtsp-streaming-pipeline");
-
-    /* Create elements */
-    gst_data_t data;
-    data.source = gst_element_factory_make("rtspsrc", "source");
-    data.depay = gst_element_factory_make("rtph264depay", "depay");
-    data.parse = gst_element_factory_make("h264parse", "parse");
-    data.decoder = gst_element_factory_make("avdec_h264", "decoder");
-    data.convert = gst_element_factory_make("videoconvert", "convert");
-    data.scale = gst_element_factory_make("videoscale", "scale");
-    data.encoder = gst_element_factory_make("x264enc", "encoder");
-    data.mux = gst_element_factory_make("mp4mux", "multiplexer");
-    data.sink = gst_element_factory_make("filesink", "sink");
-
-    if (!pipeline || !data.source || !data.depay || !data.parse ||
-        !data.decoder || !data.convert || !data.scale || !data.encoder ||
-        !data.mux || !data.sink) {
-        printf("Failed to create one or multiple gst elements\n");
-        return -1;
-    }
-
-    /* clang-format off */
-    g_object_set(G_OBJECT(data.source),
-                 "location", RTSP_STREAM_URL,
-                 "latency", 0,
-                 NULL);
-    /* clang-format on */
-    g_object_set(G_OBJECT(data.sink), "location", "record.mp4", NULL);
-
-    /* Add all elements into the pipe line */
-    gst_bin_add_many(GST_BIN(pipeline), data.source, data.depay, data.parse,
-                     data.decoder, data.convert, data.scale, data.encoder,
-                     data.mux, data.sink, NULL);
-
-    /* Link all elements in the pipeline */
-    if (!gst_element_link_many(data.depay, data.parse, data.decoder,
-                               data.convert, data.scale, data.encoder, data.mux,
-                               data.sink, NULL)) {
-        g_printerr("Failed to link elements\n");
-        gst_object_unref(pipeline);
-        return -1;
-    }
-
-    /* Attach signal handlers */
-    g_signal_connect(data.source, "pad-added", G_CALLBACK(pad_added_handler),
-                     &data);
-
-    /* Start GStreamer */
-    gst_element_set_state(pipeline, GST_STATE_PLAYING);
-
-    printf("gstreamer: Start playing...\n");
-
-    /* Wait until received error or EOS message */
-    GstBus *bus = gst_element_get_bus(pipeline);
-    gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE,
-                               GST_MESSAGE_ERROR | GST_MESSAGE_EOS);
-
-    /* Free resources */
-    gst_object_unref(bus);
-    gst_element_set_state(pipeline, GST_STATE_NULL);
-    gst_object_unref(pipeline);
-
-    return 0;
-}
-
-int rtsp_stream_display(void)
-{
-    gst_init(NULL, NULL);
-
-    /* Create new pipeline */
-    GstElement *pipeline = gst_pipeline_new("my-pipeline");
-
-    // Create elements
-    gst_data_t data;
-    data.source = gst_element_factory_make("rtspsrc", "rtspsrc0");
-    data.depay = gst_element_factory_make("rtph264depay", "depay");
-    data.parse = gst_element_factory_make("h264parse", "parse");
-    data.decoder = gst_element_factory_make("avdec_h264", "decoder");
-    data.convert = gst_element_factory_make("videoconvert", "convert");
-    data.scale = gst_element_factory_make("videoscale", "scale");
-    data.sink = gst_element_factory_make("autovideosink", "sink");
-
-    if (!pipeline || !data.source || !data.depay || !data.parse ||
-        !data.decoder || !data.convert || !data.scale || !data.sink) {
-        printf("Failed to create one or multiple gst elements\n");
-        return -1;
-    }
-
-    /* clang-format off */
-    GstCaps *caps =
-        gst_caps_new_simple(VIDEO_FORMAT,
-                            "width", G_TYPE_INT, FRAME_WIDTH,
-                            "height", G_TYPE_INT, FRAME_HEIGHT,
-                            NULL);
-    /* clang-format on */
-
-    /* clang-format off */
-    g_object_set(G_OBJECT(data.source),
-                 "location", RTSP_STREAM_URL,
-                 "latency", 0,
-                 NULL);
-    /* clang-format on */
-
-    /* Add all elements into the pipe line */
-    gst_bin_add_many(GST_BIN(pipeline), data.source, data.depay, data.parse,
-                     data.decoder, data.convert, data.scale, data.sink, NULL);
-
-    /* Link all elements in the pipeline */
-    if (!gst_element_link_many(data.depay, data.parse, data.decoder,
-                               data.convert, data.scale, NULL)) {
-        g_printerr("Failed to link elements (Stage 1)\n");
-        gst_object_unref(pipeline);
-        return -1;
-    }
-
-    if (!gst_element_link_filtered(data.scale, data.sink, caps)) {
-        g_printerr("Failed to link elements (Stage 2)\n");
-        gst_object_unref(pipeline);
-        return -1;
-    }
-
-    /* Attach signal handler */
-    g_signal_connect(data.source, "pad-added", G_CALLBACK(pad_added_handler),
-                     &data);
-
-    /* Start GStreamer */
-    gst_element_set_state(pipeline, GST_STATE_PLAYING);
-
-    printf("gstreamer: Start playing...\n");
-
-    /* Wait until received error or EOS message */
-    GstBus *bus = gst_element_get_bus(pipeline);
-    gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE,
-                               GST_MESSAGE_ERROR | GST_MESSAGE_EOS);
-
-    /* Free resources */
-    gst_object_unref(bus);
-    gst_element_set_state(pipeline, GST_STATE_NULL);
-    gst_object_unref(pipeline);
-
-    return 0;
 }

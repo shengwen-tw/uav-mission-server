@@ -616,7 +616,8 @@ static void sig_handler(int sig)
 {
     switch (sig) {
     case SIGINT:
-        exit(0);
+        rtsp_stream_handle_eos();
+        break;
     case SIGABRT:
     case SIGTERM: {
         char b = '\0';
@@ -917,7 +918,7 @@ int main(int argc, char const *argv[])
         pthread_create(&uart_server_tid, NULL, run_uart_server, NULL);
 
         pthread_t gstreamer_tid;
-        pthread_create(&gstreamer_tid, NULL, rtsp_jpeg_saver, NULL);
+        pthread_create(&gstreamer_tid, NULL, rtsp_stream_saver, NULL);
 
         pthread_join(uart_server_tid, NULL);
         pthread_join(gstreamer_tid, NULL);
