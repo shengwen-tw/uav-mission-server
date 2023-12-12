@@ -412,7 +412,7 @@ static void help(const char *s, ...)
         va_end(args);
     }
 
-    fputs("usage: uart-server [-h] serial_port config_str [tcp_port]\n",
+    fputs("usage: mission-server [-h] serial_port config_str [tcp_port]\n",
           stderr);
 
     /* Print only brief usage info if an error message was provided */

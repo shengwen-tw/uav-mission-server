@@ -24,7 +24,7 @@ CFLAGS += -O2 -Wall
 CFLAGS += -I lib/mavlink
 CFLAGS += -I lib/mavlink/common
 CFLAGS += -I.
-CFLAGS += -D MASTER_PID_FILE="\"/tmp/uart-server.pid\""
+CFLAGS += -D MASTER_PID_FILE="\"/tmp/mission-server.pid\""
 
 # GStreamer
 CFLAGS += $(shell pkg-config --cflags gstreamer-1.0)
@@ -33,7 +33,7 @@ LDFLAGS += $(shell pkg-config --libs gstreamer-1.0)
 # libyaml
 LDFLAGS += -lyaml
 
-TARGET = uart-server
+TARGET = mission-server
 
 SRCS := \
 	main.c \
