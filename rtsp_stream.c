@@ -1,14 +1,10 @@
+#include <glib.h>
+#include <gst/gst.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <time.h>
 
-#include <glib.h>
-#include <gst/gst.h>
-
-#define RTSP_STREAM_URL "rtsp://10.20.13.136:8900/live"
-#define VIDEO_FORMAT "video/x-raw"
-#define FRAME_WIDTH 1280
-#define FRAME_HEIGHT 720
+#include "config.h"
 
 typedef struct {
     /* RTSP source */
@@ -127,6 +123,16 @@ void rtsp_stream_handle_eos(void)
 
 void *rtsp_stream_saver(void *args)
 {
+    char *rtsp_stream_url = "";
+    get_config_param("rtsp_stream_url", &rtsp_stream_url);
+
+    char *video_format = "";
+    get_config_param("video_format", &video_format);
+
+    int image_width = 0, image_height = 0;
+    get_config_param("image_width", &image_width);
+    get_config_param("image_height", &image_height);
+
     gst_init(NULL, NULL);
 
     /* Create pipeline */
@@ -168,13 +174,13 @@ void *rtsp_stream_saver(void *args)
 
     /* clang-format off */
     GstCaps *caps =
-        gst_caps_new_simple(VIDEO_FORMAT,
-                            "width", G_TYPE_INT, FRAME_WIDTH,
-                            "height", G_TYPE_INT, FRAME_HEIGHT,
+        gst_caps_new_simple(video_format,
+                            "width", G_TYPE_INT, image_width,
+                            "height", G_TYPE_INT, image_height,
                             NULL);
 
     g_object_set(G_OBJECT(data.source),
-                 "location", RTSP_STREAM_URL,
+                 "location", rtsp_stream_url,
                  "latency", 0,
                  NULL);
     /* clang-format on */

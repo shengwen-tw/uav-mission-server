@@ -7,10 +7,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "config.h"
 #include "siyi_camera.h"
-
-#define SIYI_CAM_IP "192.168.50.25"
-#define SIYI_CAM_PORT 37260
 
 #define SIYI_HEADER_SZ 8
 #define SIYI_CRC_SZ 2
@@ -171,6 +169,12 @@ void siyi_cam_gimbal_centering(void)
 
 void siyi_cam_open(void)
 {
+    char *ip = "";
+    get_config_param("siyi_camera_ip", &ip);
+
+    int port = 0;
+    get_config_param("siyi_camera_port", &port);
+
     /* Initialize UDP socket */
     if ((siyi_cam_fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
         printf("%s(): Failed to open the socket\n", __func__);
@@ -180,8 +184,8 @@ void siyi_cam_open(void)
     /* Connect to the camera */
     struct sockaddr_in siyi_cam_addr = {
         .sin_family = AF_INET,
-        .sin_addr.s_addr = inet_addr(SIYI_CAM_IP),
-        .sin_port = htons(SIYI_CAM_PORT),
+        .sin_addr.s_addr = inet_addr(ip),
+        .sin_port = htons(port),
     };
     if (connect(siyi_cam_fd, (struct sockaddr *) &siyi_cam_addr,
                 sizeof(struct sockaddr)) == -1) {

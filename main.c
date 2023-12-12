@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "config.h"
 #include "fcu.h"
 #include "mavlink.h"
 #include "mavlink_parser.h"
@@ -866,6 +867,8 @@ void send_signal(int signo)
 #define CMD_FIFO "/tmp/cmd_fifo"
 int main(int argc, char const *argv[])
 {
+    load_configs("configs/siyi_a8_mini.yaml", "siyi");
+
     int ret_val = EXIT_FAILURE;
 
     if (argc == 2) {
