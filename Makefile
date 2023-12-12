@@ -37,6 +37,7 @@ TARGET = mission-server
 
 SRCS := \
 	main.c \
+        uart_server.c \
 	serial.c \
 	system.c \
 	fcu.c \
