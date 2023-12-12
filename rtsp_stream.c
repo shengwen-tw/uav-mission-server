@@ -123,6 +123,15 @@ void rtsp_stream_handle_eos(void)
 
 void *rtsp_stream_saver(void *args)
 {
+    char *board_name = "";
+    get_config_param("board", &board_name);
+
+    bool rb5_codec = false;
+    if (strcmp("rb5", board_name) == 0) {
+        rb5_codec = true;
+        printf("Qualcomm RB5 acceleration enabled\n");
+    }
+
     char *rtsp_stream_url = "";
     get_config_param("rtsp_stream_url", &rtsp_stream_url);
 
@@ -138,28 +147,43 @@ void *rtsp_stream_saver(void *args)
     /* Create pipeline */
     pipeline = gst_pipeline_new("rtsp-pipeline");
 
-    /* Create elements */
+    /*=================*
+     * Create elements *
+     *=================*/
+
     gst_data_t data;
+
+    /* Source and tee components */
     data.source = gst_element_factory_make("rtspsrc", "source");
     data.tee = gst_element_factory_make("tee", "tee");
 
+    /* JPEG branch components */
     data.jpg_queue = gst_element_factory_make("queue", "jpg_queue");
-    data.jpg_depay = gst_element_factory_make("rtph264depay", "jpg_depay");
-    data.jpg_parse = gst_element_factory_make("h264parse", "jpg_parse");
-    data.jpg_decoder = gst_element_factory_make("avdec_h264", "jpg_decoder");
+    data.jpg_depay = gst_element_factory_make("rtph265depay", "jpg_depay");
+    data.jpg_parse = gst_element_factory_make("h265parse", "jpg_parse");
+    if (rb5_codec)
+        data.jpg_decoder = gst_element_factory_make("qtivdec", "jpg_decoder");
+    else
+        data.jpg_decoder =
+            gst_element_factory_make("avdec_h265", "jpg_decoder");
     data.jpg_convert = gst_element_factory_make("videoconvert", "jpg_convert");
     data.jpg_scale = gst_element_factory_make("videoscale", "jpg_scale");
     data.jpg_encoder = gst_element_factory_make("jpegenc", "jpg_encoder");
     data.jpg_sink = gst_element_factory_make("appsink", "jpg_sink");
 
+    /* MP4 branch components */
     data.mp4_queue = gst_element_factory_make("queue", "mp4_queue");
-    data.mp4_depay = gst_element_factory_make("rtph264depay", "mp4_depay");
-    data.mp4_parse = gst_element_factory_make("h264parse", "mp4_parse");
-    data.mp4_decoder = gst_element_factory_make("avdec_h264", "mp4_decoder");
+    data.mp4_depay = gst_element_factory_make("rtph265depay", "mp4_depay");
+    data.mp4_parse = gst_element_factory_make("h265parse", "mp4_parse");
+    if (rb5_codec)
+        data.mp4_decoder = gst_element_factory_make("qtivdec", "mp4_decoder");
+    else
+        data.mp4_decoder =
+            gst_element_factory_make("avdec_h265", "mp4_decoder");
     data.mp4_convert = gst_element_factory_make("videoconvert", "mp4_convert");
     data.mp4_scale = gst_element_factory_make("videoscale", "mp4_scale");
-    data.mp4_encoder = gst_element_factory_make("x264enc", "encoder");
-    data.mp4_mux = gst_element_factory_make("mp4mux", "multiplexer");
+    data.mp4_encoder = gst_element_factory_make("x264enc", "mp4_encoder");
+    data.mp4_mux = gst_element_factory_make("mp4mux", "mp4_mux");
     data.mp4_sink = gst_element_factory_make("filesink", "sink");
 
     if (!data.source || !data.tee || !data.jpg_queue || !data.jpg_depay ||
@@ -169,6 +193,7 @@ void *rtsp_stream_saver(void *args)
         !data.mp4_decoder || !data.mp4_convert || !data.mp4_scale ||
         !data.mp4_encoder || !data.mp4_mux || !data.mp4_sink) {
         printf("Failed to create one or multiple gst elements\n");
+        exit(1);
         return NULL;
     }
 
@@ -198,6 +223,10 @@ void *rtsp_stream_saver(void *args)
      *====================*/
 
     g_object_set(G_OBJECT(data.jpg_encoder), "quality", 90, NULL);
+    if (rb5_codec) {
+        g_object_set(G_OBJECT(data.jpg_decoder), "skip-frames", 1, NULL);
+        g_object_set(G_OBJECT(data.jpg_decoder), "turbo", 1, NULL);
+    }
     g_object_set(G_OBJECT(data.jpg_sink), "emit-signals", TRUE, NULL);
 
     /* Link JPEG saving branch */
@@ -206,18 +235,21 @@ void *rtsp_stream_saver(void *args)
                                data.jpg_convert, data.jpg_scale, NULL)) {
         g_printerr("Failed to link elements (JPEG stage 1)\n");
         gst_object_unref(pipeline);
+        exit(1);
         return NULL;
     }
 
     if (!gst_element_link_filtered(data.jpg_scale, data.jpg_encoder, caps)) {
         g_printerr("Failed to link elements (JPEG stage 2)\n");
         gst_object_unref(pipeline);
+        exit(1);
         return NULL;
     }
 
     if (!gst_element_link_many(data.jpg_encoder, data.jpg_sink, NULL)) {
         g_printerr("Failed to link elements (JPEG stage 3)\n");
         gst_object_unref(pipeline);
+        exit(1);
         return NULL;
     }
 
@@ -231,8 +263,12 @@ void *rtsp_stream_saver(void *args)
      * MP4 Saving branch *
      *===================*/
 
-    g_object_set(G_OBJECT(data.mp4_sink), "location", "record.mp4", NULL);
     g_object_set(G_OBJECT(data.mp4_encoder), "tune", 0x00000004, NULL);
+    if (rb5_codec) {
+        g_object_set(G_OBJECT(data.mp4_decoder), "skip-frames", 1, NULL);
+        g_object_set(G_OBJECT(data.mp4_decoder), "turbo", 1, NULL);
+    }
+    g_object_set(G_OBJECT(data.mp4_sink), "location", "record.mp4", NULL);
 
     /* Link MP4 saving branch */
     if (!gst_element_link_many(
@@ -241,6 +277,7 @@ void *rtsp_stream_saver(void *args)
             data.mp4_encoder, data.mp4_mux, data.mp4_sink, NULL)) {
         g_printerr("Failed to link elements (MP4 stage 1)\n");
         gst_object_unref(pipeline);
+        exit(1);
         return NULL;
     }
 

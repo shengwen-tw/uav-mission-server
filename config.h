@@ -2,6 +2,8 @@
 #define __CONFIG_H__
 
 typedef struct {
+    char *board;
+
     char *rtsp_stream_url;
     char *video_format;
     int image_width;
