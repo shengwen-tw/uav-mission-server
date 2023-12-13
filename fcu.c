@@ -110,6 +110,7 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
     static float cam_pitch = 0;
     static uint16_t button_a_last = 0;
     static uint16_t button_snapshot_last = 0;
+    static uint16_t record_last = 0;
     static bool focus_stop = false;
 
     /* Map RC signals to [-100, 100] */
@@ -120,10 +121,14 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
     uint16_t button_a = rc_channels.chan5_raw;
     uint16_t button_snapshot = rc_channels.chan13_raw;
     uint16_t zoom = rc_channels.chan9_raw;
+    uint16_t record = rc_channels.chan14_raw;
 
     /* Initialization */
     if (button_a_last == 0)
         button_a_last = button_a;
+
+    if (record_last == 0)
+        record_last = record;
 
     if (button_snapshot_last == 0)
         button_snapshot_last = button_snapshot;
@@ -174,6 +179,12 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
         printf("Zoom out\n");
     } else if (focus_stop) {
         focus_stop = false;
+    }
+
+    /* Handle video recording button */
+    if (record != record_last) {
+        record_last = record;
+        printf("Record\n");
     }
 
     /* Send camera control signal */
