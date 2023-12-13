@@ -194,7 +194,6 @@ void *rtsp_stream_saver(void *args)
         !data.mp4_encoder || !data.mp4_mux || !data.mp4_sink) {
         printf("Failed to create one or multiple gst elements\n");
         exit(1);
-        return NULL;
     }
 
     /* clang-format off */
@@ -236,21 +235,18 @@ void *rtsp_stream_saver(void *args)
         g_printerr("Failed to link elements (JPEG stage 1)\n");
         gst_object_unref(pipeline);
         exit(1);
-        return NULL;
     }
 
     if (!gst_element_link_filtered(data.jpg_scale, data.jpg_encoder, caps)) {
         g_printerr("Failed to link elements (JPEG stage 2)\n");
         gst_object_unref(pipeline);
         exit(1);
-        return NULL;
     }
 
     if (!gst_element_link_many(data.jpg_encoder, data.jpg_sink, NULL)) {
         g_printerr("Failed to link elements (JPEG stage 3)\n");
         gst_object_unref(pipeline);
         exit(1);
-        return NULL;
     }
 
     /* Attach signal handlers */
@@ -278,7 +274,6 @@ void *rtsp_stream_saver(void *args)
         g_printerr("Failed to link elements (MP4 stage 1)\n");
         gst_object_unref(pipeline);
         exit(1);
-        return NULL;
     }
 
     /*=================*
