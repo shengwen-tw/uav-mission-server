@@ -32,7 +32,9 @@ typedef struct {
     GstElement *mp4_scale;
     GstElement *mp4_encoder;
     GstElement *mp4_mux;
+    GstElement *mp4_osel;
     GstElement *mp4_sink;
+    GstElement *fake_sink;
 } gst_data_t;
 
 static GstElement *pipeline;
@@ -117,7 +119,11 @@ void rtsp_stream_handle_eos(void)
     if (!end) {
         end = true;
         printf("Sending end-of-stream (EoS), wait for termination...\n");
-        gst_element_send_event(pipeline, gst_event_new_eos());
+
+        GstElement *mp4_branch =
+            gst_bin_get_by_name(GST_BIN(pipeline), "mp4_queue");
+
+        gst_element_send_event(mp4_branch, gst_event_new_eos());
     }
 }
 
@@ -184,14 +190,17 @@ void *rtsp_stream_saver(void *args)
     data.mp4_scale = gst_element_factory_make("videoscale", "mp4_scale");
     data.mp4_encoder = gst_element_factory_make("x264enc", "mp4_encoder");
     data.mp4_mux = gst_element_factory_make("mp4mux", "mp4_mux");
-    data.mp4_sink = gst_element_factory_make("filesink", "sink");
+    data.mp4_osel = gst_element_factory_make("output-selector", "osel");
+    data.mp4_sink = gst_element_factory_make("filesink", "mp4_sink");
+    data.fake_sink = gst_element_factory_make("fakesink", "fake_sink");
 
     if (!data.source || !data.tee || !data.jpg_queue || !data.jpg_depay ||
         !data.jpg_parse || !data.jpg_decoder || !data.jpg_convert ||
         !data.jpg_scale || !data.jpg_encoder || !data.jpg_sink ||
         !data.mp4_queue || !data.mp4_depay || !data.mp4_parse ||
         !data.mp4_decoder || !data.mp4_convert || !data.mp4_scale ||
-        !data.mp4_encoder || !data.mp4_mux || !data.mp4_sink) {
+        !data.mp4_encoder || !data.mp4_mux || !data.mp4_osel ||
+        !data.mp4_sink || !data.fake_sink) {
         printf("Failed to create one or multiple gst elements\n");
         exit(1);
     }
@@ -210,12 +219,13 @@ void *rtsp_stream_saver(void *args)
     /* clang-format on */
 
     /* Add all elements into the pipeline */
-    gst_bin_add_many(
-        GST_BIN(pipeline), data.source, data.tee, data.jpg_queue,
-        data.jpg_depay, data.jpg_parse, data.jpg_decoder, data.jpg_convert,
-        data.jpg_scale, data.jpg_encoder, data.jpg_sink, data.mp4_queue,
-        data.mp4_depay, data.mp4_parse, data.mp4_decoder, data.mp4_convert,
-        data.mp4_scale, data.mp4_encoder, data.mp4_mux, data.mp4_sink, NULL);
+    gst_bin_add_many(GST_BIN(pipeline), data.source, data.tee, data.jpg_queue,
+                     data.jpg_depay, data.jpg_parse, data.jpg_decoder,
+                     data.jpg_convert, data.jpg_scale, data.jpg_encoder,
+                     data.jpg_sink, data.mp4_queue, data.mp4_depay,
+                     data.mp4_parse, data.mp4_decoder, data.mp4_convert,
+                     data.mp4_scale, data.mp4_encoder, data.mp4_mux,
+                     data.mp4_osel, data.mp4_sink, data.fake_sink, NULL);
 
     /*====================*
      * JPEG saving branch *
@@ -264,17 +274,43 @@ void *rtsp_stream_saver(void *args)
         g_object_set(G_OBJECT(data.mp4_decoder), "skip-frames", 1, NULL);
         g_object_set(G_OBJECT(data.mp4_decoder), "turbo", 1, NULL);
     }
-    g_object_set(G_OBJECT(data.mp4_sink), "location", "record.mp4", NULL);
+
+    char timestamp[15] = {0};
+    generate_timestamp(timestamp);
+
+    char file_name[50];
+    sprintf(file_name, "%s.mp4", timestamp);
+    g_object_set(G_OBJECT(data.mp4_sink), "location", file_name, NULL);
 
     /* Link MP4 saving branch */
     if (!gst_element_link_many(
             data.tee, data.mp4_queue, data.mp4_depay, data.mp4_parse,
             data.mp4_decoder, data.mp4_convert, data.mp4_scale,
-            data.mp4_encoder, data.mp4_mux, data.mp4_sink, NULL)) {
+            data.mp4_encoder, data.mp4_mux, data.mp4_osel, NULL)) {
         g_printerr("Failed to link elements (MP4 stage 1)\n");
         gst_object_unref(pipeline);
         exit(1);
     }
+
+    GstPad *osel_src1 = gst_element_get_request_pad(data.mp4_osel, "src_%u");
+    GstPad *osel_src2 = gst_element_get_request_pad(data.mp4_osel, "src_%u");
+
+    GstPad *sinkpad1 = gst_element_get_static_pad(data.mp4_sink, "sink");
+    GstPad *sinkpad2 = gst_element_get_static_pad(data.fake_sink, "sink");
+
+    if ((gst_pad_link(osel_src1, sinkpad1) != GST_PAD_LINK_OK) ||
+        (gst_pad_link(osel_src2, sinkpad2) != GST_PAD_LINK_OK)) {
+        printf("Failed to link output selector\n");
+        exit(1);
+    }
+
+    g_object_set(G_OBJECT(data.mp4_osel), "resend-latest", TRUE, NULL);
+    g_object_set(G_OBJECT(data.mp4_sink), "async", FALSE, NULL);
+    g_object_set(G_OBJECT(data.fake_sink), "async", FALSE, NULL);
+    g_object_set(G_OBJECT(data.mp4_sink), "sync", FALSE, NULL);
+    g_object_set(G_OBJECT(data.fake_sink), "sync", FALSE, NULL);
+
+    g_object_set(G_OBJECT(data.mp4_osel), "active-pad", osel_src1, NULL);
 
     /*=================*
      * Start GStreamer *
