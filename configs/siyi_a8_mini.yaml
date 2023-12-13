@@ -1,6 +1,6 @@
 board: rb5
 
-rtsp_stream_url: rtsp://10.20.13.136:8554/main.264
+rtsp_stream_url: rtsp://192.168.50.25:8554/main.264
 video_format: video/x-raw
 image_width: 1280
 image_height: 720
