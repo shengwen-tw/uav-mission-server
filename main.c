@@ -70,6 +70,7 @@ void run_server(int argc, char **argv)
 int main(int argc, char const *argv[])
 {
     load_configs("configs/siyi_a8_mini.yaml", "siyi");
+    load_rc_configs("configs/rc_config.yaml");
 
     if (argc == 2) {
         if ((strcmp(argv[1], "-h") == 0) || (strcmp(argv[1], "--help") == 0)) {

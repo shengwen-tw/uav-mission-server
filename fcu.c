@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 #include "common.h"
+#include "config.h"
 #include "mavlink.h"
 #include "mavlink_parser.h"
 #include "rtsp_stream.h"
@@ -87,24 +88,9 @@ void mav_fcu_gps_raw_int(mavlink_message_t *recvd_msg)
     //    status("FCU: Received gps_raw_int message.");
 }
 
-#define RC_YAW_MIN 1102
-#define RC_YAW_MID 1515
-#define RC_YAW_MAX 1927
-
-#define RC_PITCH_MIN 1102
-#define RC_PITCH_MID 1515
-#define RC_PITCH_MAX 1927
-
-#define RC_SCROLL_MIN 1102
-#define RC_SCROLL_MID 1515
-#define RC_SCROLL_MAX 1927
-
 void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
 {
 #define INC 0.3
-
-    mavlink_rc_channels_t rc_channels;
-    mavlink_msg_rc_channels_decode(recvd_msg, &rc_channels);
 
     static float cam_yaw = 0;
     static float cam_pitch = 0;
@@ -113,11 +99,27 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
     static uint16_t record_last = 0;
     static bool focus_stop = false;
 
+    int rc_yaw_min = get_rc_config_min(1);
+    int rc_yaw_mid = get_rc_config_mid(1);
+    int rc_yaw_max = get_rc_config_max(1);
+    bool rc_yaw_reverse = get_rc_config_reverse(1);
+
+    int rc_pitch_min = get_rc_config_min(2);
+    int rc_pitch_mid = get_rc_config_mid(2);
+    int rc_pitch_max = get_rc_config_max(2);
+    bool rc_pitch_reverse = get_rc_config_reverse(2);
+
+    int rc_scroll_min = get_rc_config_min(9);
+    int rc_scroll_max = get_rc_config_max(9);
+
+    mavlink_rc_channels_t rc_channels;
+    mavlink_msg_rc_channels_decode(recvd_msg, &rc_channels);
+
     /* Map RC signals to [-100, 100] */
-    float rc_yaw = ((float) rc_channels.chan1_raw - RC_YAW_MID) /
-                   (RC_YAW_MAX - RC_YAW_MIN) * 200;
-    float rc_pitch = ((float) rc_channels.chan2_raw - RC_PITCH_MID) /
-                     (RC_PITCH_MAX - RC_PITCH_MIN) * 200;
+    float rc_yaw = ((float) rc_channels.chan1_raw - rc_yaw_mid) /
+                   (rc_yaw_max - rc_yaw_min) * 200;
+    float rc_pitch = ((float) rc_channels.chan2_raw - rc_pitch_mid) /
+                     (rc_pitch_max - rc_pitch_min) * 200;
     uint16_t button_a = rc_channels.chan5_raw;
     uint16_t button_snapshot = rc_channels.chan13_raw;
     uint16_t zoom = rc_channels.chan9_raw;
@@ -134,8 +136,8 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
         button_snapshot_last = button_snapshot;
 
     /* Reverse directions */
-    rc_yaw *= -1;
-    rc_pitch *= -1;
+    rc_yaw *= rc_yaw_reverse ? -1 : +1;
+    rc_pitch *= rc_pitch_reverse ? -1 : +1;
 
 #if 0
     printf(
@@ -169,11 +171,11 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
     }
 
     /* Handle zoom button */
-    if (zoom <= RC_SCROLL_MIN) {
+    if (zoom <= rc_scroll_min) {
         siyi_cam_manual_zoom(0x1e, 0);
         focus_stop = true;
         printf("Zoom in\n");
-    } else if (zoom >= RC_SCROLL_MAX) {
+    } else if (zoom >= rc_scroll_max) {
         siyi_cam_manual_zoom(0x01, 0);
         focus_stop = true;
         printf("Zoom out\n");
@@ -188,7 +190,8 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
     }
 
     /* Send camera control signal */
-    siyi_cam_gimbal_rotate((int16_t)(cam_yaw * 10), (int16_t)(cam_pitch * 10));
+    siyi_cam_gimbal_rotate((int16_t) (cam_yaw * 10),
+                           (int16_t) (cam_pitch * 10));
 }
 
 void mav_fcu_autopilot_version(mavlink_message_t *recvd_msg)
