@@ -608,7 +608,7 @@ static void sig_handler(int sig)
 {
     switch (sig) {
     case SIGINT:
-        rtsp_stream_handle_eos();
+        rtsp_stream_terminate();
         break;
     case SIGABRT:
     case SIGTERM: {

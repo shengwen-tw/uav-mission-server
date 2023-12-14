@@ -172,7 +172,7 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
 
     if (button_snapshot != button_snapshot_last) {
         button_snapshot_last = button_snapshot;
-        rtsp_stream_save_image();
+        rtsp_stream_save_image(0);
     }
 
     /* Handle zoom button */
@@ -200,7 +200,7 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
     /* Handle video recording button */
     if (record != record_last) {
         record_last = record;
-        printf("Record\n");
+        rtsp_stream_change_recording_state(0);
     }
 
     /* Send camera control signal */
