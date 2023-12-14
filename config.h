@@ -4,6 +4,8 @@
 #include <stdbool.h>
 
 typedef struct {
+    char *save_path;
+
     char *board;
 
     char *rtsp_stream_url;

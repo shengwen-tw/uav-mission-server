@@ -1,5 +1,6 @@
 #include <glib.h>
 #include <gst/gst.h>
+#include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <time.h>
@@ -11,7 +12,7 @@ typedef struct {
     bool recording;
     bool busy;
     bool snapshot_request;
-    char mp4_file_name[100];
+    char mp4_file_name[PATH_MAX];
 
     /* Video and image saving pipeline */
     GstElement *pipeline;
@@ -105,8 +106,10 @@ static void on_new_sample_handler(GstElement *sink, gst_data_t *data)
         generate_timestamp(timestamp);
 
         /* Save JPEG file */
-        gchar filename[50];
-        g_snprintf(filename, sizeof(filename), "%s.jpg", timestamp);
+        char filename[PATH_MAX];
+        char *save_path;
+        get_config_param("save_path", &save_path);
+        snprintf(filename, sizeof(filename), "%s/%s.jpg", save_path, timestamp);
         FILE *file = fopen(filename, "wb");
 
         printf("[Camera %d] %s is saved!\n", data->camera_id, filename);
@@ -146,8 +149,10 @@ void rtsp_stream_change_recording_state(int camera_id)
 
         /* Assign new file name */
         char timestamp[15] = {0};
+        char *save_path;
         generate_timestamp(timestamp);
-        sprintf(data.mp4_file_name, "%s.mp4", timestamp);
+        get_config_param("save_path", &save_path);
+        sprintf(data.mp4_file_name, "%s/%s.mp4", save_path, timestamp);
         g_object_set(G_OBJECT(data.mp4_sink), "location", data.mp4_file_name,
                      NULL);
 

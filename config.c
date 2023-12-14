@@ -122,6 +122,7 @@ static void load_siyi_configs(char *yaml_path, config_siyi_t *config)
 
         if (event_type == YAML_SCALAR_EVENT) {
             READ_PARAM_START(true);
+            READ_PARAM(key, "save_path", TYPE_STRING, &config->save_path);
             READ_PARAM(key, "board", TYPE_STRING, &config->board);
             READ_PARAM(key, "rtsp_stream_url", TYPE_STRING,
                        &config->rtsp_stream_url);
@@ -234,7 +235,9 @@ void get_config_param(char *name, void *retval)
     if (strcmp("siyi", device_name) == 0) {
         config_siyi_t *config = &config_list.config_siyi;
 
-        if (strcmp("rtsp_stream_url", name) == 0) {
+        if (strcmp("save_path", name) == 0) {
+            *(char **) retval = config->save_path;
+        } else if (strcmp("rtsp_stream_url", name) == 0) {
             *(char **) retval = config->rtsp_stream_url;
         } else if (strcmp("board", name) == 0) {
             *(char **) retval = config->board;
