@@ -97,7 +97,6 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
     static uint16_t button_a_last = 0;
     static uint16_t button_snapshot_last = 0;
     static uint16_t record_last = 0;
-    static bool focus_stop = false;
 
     int rc_yaw_min = get_rc_config_min(1);
     int rc_yaw_mid = get_rc_config_mid(1);
@@ -124,6 +123,12 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
     uint16_t button_snapshot = rc_channels.chan13_raw;
     uint16_t zoom = rc_channels.chan9_raw;
     uint16_t record = rc_channels.chan14_raw;
+
+    /* Zooming */
+    static int zoom_ratio = 10;  // 1.0
+    static int zoom_dir = 0;
+    int zoom_inc = 5;  // 0.5
+    static bool zoom_stop = false;
 
     /* Initialization */
     if (button_a_last == 0)
@@ -172,15 +177,24 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
 
     /* Handle zoom button */
     if (zoom <= rc_scroll_min) {
-        siyi_cam_manual_zoom(0x1e, 0);
-        focus_stop = true;
-        printf("Zoom in\n");
+        zoom_stop = true;
+        zoom_dir = +1;
     } else if (zoom >= rc_scroll_max) {
-        siyi_cam_manual_zoom(0x01, 0);
-        focus_stop = true;
-        printf("Zoom out\n");
-    } else if (focus_stop) {
-        focus_stop = false;
+        zoom_stop = true;
+        zoom_dir = -1;
+    } else if (zoom_stop) {
+        zoom_stop = false;
+        zoom_ratio += zoom_dir * zoom_inc;
+
+        if (zoom_ratio < 10) {
+            zoom_ratio = 10;
+        } else if (zoom_ratio > 40) {
+            zoom_ratio = 40;
+        }
+
+        printf("Zoom ratio: %d.%d\n", zoom_ratio / 10, zoom_ratio % 10);
+
+        siyi_cam_manual_zoom(zoom_ratio / 10, zoom_ratio % 10);
     }
 
     /* Handle video recording button */
