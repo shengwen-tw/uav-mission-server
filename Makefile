@@ -61,6 +61,9 @@ FORMAT_FILES = ".*\.\(c\|h\)"
 FORMAT_EXCLUDE = -path ./lib
 FORMAT_FILES = ".*\.\(c\|h\)"
 
+test:
+	./mission-server -d siyi -c configs/siyi_a8_mini.yaml -s /dev/ttyUSB0 -b 57600
+
 format:
 	@echo "Execute clang-format"
 	@find . -type d \( $(FORMAT_EXCLUDE) \) -prune -o \
@@ -70,4 +73,4 @@ format:
 clean:
 	$(RM) $(TARGET)
 
-.PHONY: all format clean
+.PHONY: all test format clean
