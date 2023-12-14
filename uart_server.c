@@ -48,10 +48,6 @@ typedef struct pollfd Waiter;
 #define DEFAULT_PORT 8278
 #define SERIAL_TIMEOUT 1000
 
-#define ARGS_SERIAL_PORT 1
-#define ARGS_SERIAL_CFG 2
-#define ARGS_TCP_PORT 3
-
 #define SERIAL_CFG_BAUDRATE_IDX 0
 #define SERIAL_CFG_PARITY_IDX 1
 #define SERIAL_CFG_DATA_BITS_IDX 2
@@ -662,29 +658,28 @@ void wait_serial_flushing_complete(SerialFd sport)
     fcu_read_mavlink_msg(g_cache, rbytes);
 }
 
-int g_argc;
-char **g_argv;
+char *g_serial_path;
+char *g_serial_config;
+char *g_net_port;
 void *run_uart_server(void *args)
 {
-    int argc = g_argc;
-    char **argv = g_argv;
-
     int ret_val = EXIT_FAILURE;
 
     unsigned port = DEFAULT_PORT;
     struct SerialConfig cfg;
 
-    const char *parse_err = parse_serial_config(argv[ARGS_SERIAL_CFG], &cfg);
+    const char *parse_err = parse_serial_config(g_serial_config, &cfg);
 
     if (parse_err) {
         help(parse_err);
     }
     /* Parse the TCP port if provided */
-    else if ((argc == 4) &&
-             ((!get_unsigned(argv[ARGS_TCP_PORT], strlen(argv[ARGS_TCP_PORT]),
-                             &port) ||
-               (port == 0) || (port > 0xffff)))) {
-        help("port must be in the range 1-65535");
+    else if (g_net_port != NULL) {
+        if ((!get_unsigned(g_net_port, strlen(g_net_port), &port) ||
+             (port == 0) || (port > 0xffff))) {
+            help("port must be in the range 1-65535");
+            exit(1);
+        }
     } else {
         Socket server;
 
@@ -707,7 +702,7 @@ void *run_uart_server(void *args)
                 siyi_cam_open();
 
                 SerialFd serial =
-                    serial_open(argv[ARGS_SERIAL_PORT], &cfg, SERIAL_TIMEOUT);
+                    serial_open(g_serial_path, &cfg, SERIAL_TIMEOUT);
 
                 siyi_cam_gimbal_centering();
                 siyi_cam_manual_zoom(0x01, 0);
@@ -748,7 +743,7 @@ void *run_uart_server(void *args)
                         status(
                             "Serving %s @ %u bps (parity %s, %d data bits, "
                             "and %s stop bits) on port %u",
-                            argv[ARGS_SERIAL_PORT], cfg.baudrate,
+                            g_serial_path, cfg.baudrate,
                             parity_to_string(cfg.parity), cfg.data_bits,
                             stop_bits_to_string(cfg.stop_bits), port);
 

@@ -1,4 +1,4 @@
-# UART Server
+# UAV Mission Server
 
 A simple program that serves a serial port over TCP to multiple clients. The first connected
 client (in a FIFO fashion) can also send data to the serial port.
@@ -23,7 +23,7 @@ make all
 **Server:**
 
 ```shell
-$ ./uart-server serial_port config_str [tcp_port]
+$ ./mission-server -d device -c device-config-file -s serial_port -b config_str [-p tcp_port] [-r,--print-rc]
 ```
 
 **Commander:**
@@ -31,7 +31,7 @@ $ ./uart-server serial_port config_str [tcp_port]
 To play a tune with designated track number:
 
 ```
-$ ./uart-server tune track-number
+$ ./mission-server --send-tune track-number
 ```
 
 ### Arguments

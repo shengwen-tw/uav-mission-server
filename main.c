@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <getopt.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,8 +17,9 @@
 #define CMD_FIFO "/tmp/cmd_fifo"
 
 // FIXME: Pass directly into pthread
-extern int g_argc;
-extern char **g_argv;
+extern char *g_serial_path;
+extern char *g_serial_config;
+extern char *g_net_port;
 
 extern int cmd_fifo_w, cmd_fifo_r;
 
@@ -40,7 +42,7 @@ void run_commander(const char *command)
     exit(0);
 }
 
-void run_server(int argc, char **argv)
+void run_server(void)
 {
     /* create pid file */
     int mastr_pid = getpid();
@@ -55,8 +57,6 @@ void run_server(int argc, char **argv)
     }
 
     /* start the service */
-    g_argc = argc;
-    g_argv = argv;
     pthread_t uart_server_tid;
     pthread_create(&uart_server_tid, NULL, run_uart_server, NULL);
 
@@ -69,26 +69,90 @@ void run_server(int argc, char **argv)
 
 int main(int argc, char const *argv[])
 {
-    load_configs("configs/siyi_a8_mini.yaml", "siyi");
-    load_rc_configs("configs/rc_config.yaml");
+    /* clang-format off */
+    struct option opts[] = {
+        {"help", 0, NULL, 'h'},
+        {"device", 1, NULL, 'd'},
+        {"serial-path", 1, NULL, 's'},
+        {"serial-config", 1, NULL, 'b'},
+        {"ip-port", 1, NULL, 'p'},
+        {"send-tune", 1, NULL, 't'},
+        {"print-rc", 0, NULL, 'r'},
+    };
+    /* clang-format on */
 
-    if (argc == 2) {
-        if ((strcmp(argv[1], "-h") == 0) || (strcmp(argv[1], "--help") == 0)) {
+    bool commander_mode = false;
+    char *device = NULL;
+    char *device_yaml = NULL;
+    char *serial_path = NULL;
+    char *serial_config = NULL;
+    char *net_port = NULL;
+    char *cmd_arg = NULL;
+
+    int c, optidx = 0;
+    while ((c = getopt_long(argc, (char **) argv, "d:c:s:b:p:hrt", opts,
+                            &optidx)) != -1) {
+        switch (c) {
+        case 'h':
             help(NULL);
             return 0;
+        case 'd':
+            device = optarg;
+            break;
+        case 'c':
+            device_yaml = optarg;
+            break;
+        case 's':
+            serial_path = optarg;
+            break;
+        case 'b':
+            serial_config = optarg;
+            break;
+        case 'p':
+            net_port = optarg;
+            break;
+        case 't':
+            commander_mode = true;
+            cmd_arg = optarg;
+            break;
+        case 'r':
+            break;
+        default:
+            break;
         }
-    } else if (argc < 3) {
-        help("Too few arguments");
-    } else if (argc > 4) {
-        help("Too many arguments");
+    }
+
+    if (!commander_mode && !device) {
+        printf("Device name must be provided via -d option.\n");
+        exit(1);
+    }
+
+    if (!commander_mode && !device_yaml) {
+        printf("Device config file must be provided via -c option.\n");
+        exit(1);
+    }
+
+    if (!commander_mode && !serial_path) {
+        printf("Serial path must be provided via -s option.\n");
+        exit(1);
+    }
+
+    if (!commander_mode && !serial_config) {
+        printf("Serial config string must be provided via -b option.\n");
+        exit(1);
+    }
+
+    // FIXME:
+    g_serial_path = serial_path;
+    g_serial_config = serial_config;
+    g_net_port = net_port;
+
+    if (commander_mode) {
+        run_commander(cmd_arg);
     } else {
-        if (strcmp(argv[1], "tune") == 0) {
-            /* commander */
-            run_commander(argv[2]);
-        } else {
-            /* server */
-            run_server(argc, (char **) argv);
-        }
+        load_configs(device_yaml, device);
+        load_rc_configs("configs/rc_config.yaml");
+        run_server();
     }
 
     return 0;
