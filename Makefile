@@ -1,5 +1,7 @@
 UNAME := $(shell uname)
 
+ASAN := #-fsanitize=address -static-libasan
+
 ifeq ($(UNAME), Linux)
   # Linux (gcc)
   CFLAGS :=
@@ -19,7 +21,7 @@ else ifeq ($(UNAME), FreeBSD)
   LDFLAGS :=
 endif
 
-CFLAGS += -O2 -Wall
+CFLAGS += -O2 -Wall $(ASAN)
 
 CFLAGS += -I lib/mavlink
 CFLAGS += -I lib/mavlink/common
