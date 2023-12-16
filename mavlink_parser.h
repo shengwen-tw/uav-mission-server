@@ -4,8 +4,10 @@
 #include <stdint.h>
 #include "mavlink.h"
 
-#define DEF_MAVLINK_CMD(handler_function, id) \
-    [handler_function##_ID] = {.handler = handler_function, .msg_id = id}
+#define DEF_MAVLINK_CMD(handler_function, id)     \
+    {                                             \
+        .handler = handler_function, .msg_id = id \
+    }
 
 #define ENUM_MAVLINK_HANDLER(handler_function) handler_function##_ID
 

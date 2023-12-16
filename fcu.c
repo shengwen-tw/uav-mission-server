@@ -18,22 +18,12 @@ void mav_fcu_autopilot_version(mavlink_message_t *recvd_msg);
 
 extern bool serial_workaround_verbose;
 
-/* clang-format off */
-enum {
-    ENUM_MAVLINK_HANDLER(mav_fcu_ping),
-    ENUM_MAVLINK_HANDLER(mav_fcu_rc_channels),
-    ENUM_MAVLINK_HANDLER(mav_fcu_gps_raw_int),
-    ENUM_MAVLINK_HANDLER(mav_fcu_autopilot_version),
-    FCU_MAV_CMD_CNT
-};
-
 struct mavlink_cmd fcu_cmds[] = {
     DEF_MAVLINK_CMD(mav_fcu_ping, 4),
     DEF_MAVLINK_CMD(mav_fcu_gps_raw_int, 24),
     DEF_MAVLINK_CMD(mav_fcu_rc_channels, 65),
-    DEF_MAVLINK_CMD(mav_fcu_autopilot_version, 148)
+    DEF_MAVLINK_CMD(mav_fcu_autopilot_version, 148),
 };
-/* clang-format on */
 
 mavlink_status_t fcu_status;
 mavlink_message_t fcu_msg;
@@ -43,10 +33,11 @@ bool serial_status = false;
 
 void fcu_read_mavlink_msg(uint8_t *buf, size_t nbytes)
 {
+    const size_t msg_cnt = sizeof(fcu_cmds) / sizeof(struct mavlink_cmd);
     for (int i = 0; i < nbytes; i++) {
         if (mavlink_parse_char(FCU_CHANNEL, buf[i], &fcu_msg, &fcu_status) ==
             1) {
-            parse_mavlink_msg(&fcu_msg, fcu_cmds, FCU_MAV_CMD_CNT);
+            parse_mavlink_msg(&fcu_msg, fcu_cmds, msg_cnt);
         }
     }
 
