@@ -33,7 +33,7 @@ $ make
 **Server:**
 
 ```shell
-$ ./mission-server -d device -c device-config-file -s serial_port -b config_str [-p tcp_port] [-r,--print-rc]
+$ build/mission-server -d device -c device-config-file -s serial_port -b config_str [-p tcp_port] [-r,--print-rc]
 ```
 
 **Commander:**

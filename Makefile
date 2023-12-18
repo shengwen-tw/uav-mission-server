@@ -1,24 +1,22 @@
-UNAME := $(shell uname)
+include mk/common.mk
+OUT ?= build
 
 ASAN := #-fsanitize=address -static-libasan
 
-ifeq ($(UNAME), Linux)
+CFLAGS :=
+LDFLAGS := -lpthread
+
+ifeq ($(UNAME_S), Linux)
   # Linux (gcc)
-  CFLAGS :=
   CFLAGS += -Wno-stringop-overread \
             -Wno-address-of-packed-member \
             -Wno-stringop-overflow \
             -Wno-unused-result \
             -Wno-array-bounds
-  LDFLAGS :=
 else ifeq ($(UNAME), Darwin)
   # macOS (clang)
-  CFLAGS :=
-  LDFLAGS :=
 else ifeq ($(UNAME), FreeBSD)
   # FreeBSD (clang)
-  CFLAGS :=
-  LDFLAGS :=
 endif
 
 CFLAGS += -O2 -Wall $(ASAN)
@@ -35,34 +33,44 @@ LDFLAGS += $(shell pkg-config --libs gstreamer-1.0)
 # libyaml
 LDFLAGS += -lyaml
 
-TARGET = mission-server
+BIN := $(OUT)/mission-server
 
-SRCS := \
-	src/main.c \
-        src/uart_server.c \
-	src/serial.c \
-	src/system.c \
-	src/fcu.c \
-	src/mavlink_parser.c \
-	src/mavlink_publisher.c \
-        src/siyi_camera.c \
-        src/rtsp_stream.c \
-        src/config.c
+OBJS := \
+	uart_server.o \
+	serial.o \
+	system.o \
+	fcu.o \
+	mavlink_parser.o \
+	mavlink_publisher.o \
+	siyi_camera.o \
+	rtsp_stream.o \
+	config.o \
+	main.o
 
-all: $(TARGET)
+OBJS := $(addprefix $(OUT)/, $(OBJS))
+deps := $(OBJS:%.o=%.o.d)
 
-$(TARGET): $(SRCS)
-	./scripts/gen-mavlink.sh
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+all: $(BIN)
+
+lib/mavlink/common/mavlink.h:
+	scripts/gen-mavlink.sh
+
+$(OUT)/%.o: src/%.c lib/mavlink/common/mavlink.h
+	$(VECHO) "  CC\t$@\n"
+	$(Q)$(CC) -o $@ $(CFLAGS) -c -MMD -MF $@.d $<
+
+$(BIN): $(OBJS)
+	$(VECHO) "  LD\t$@\n"
+	$(Q)$(CC) -o $@ $^ $(LDFLAGS)
+
+test: $(BIN)
+	$(BIN) -d siyi -c configs/siyi_a8_mini.yaml -s /dev/ttyUSB0 -b 57600
 
 FORMAT_EXCLUDE := #-path ./dir1 -o -path ./dir2 
 FORMAT_FILES = ".*\.\(c\|h\)"
 
 FORMAT_EXCLUDE = -path ./lib
 FORMAT_FILES = ".*\.\(c\|h\)"
-
-test:
-	./mission-server -d siyi -c configs/siyi_a8_mini.yaml -s /dev/ttyUSB0 -b 57600
 
 format:
 	@echo "Execute clang-format"
@@ -71,6 +79,11 @@ format:
                 -exec clang-format -style=file -i {} \;
 
 clean:
-	$(RM) $(TARGET)
+	$(RM) $(OBJS) $(BIN) $(deps)
+
+distclean: clean
+	-rm -rf lib/mavlink
 
 .PHONY: all test format clean
+
+-include $(deps)
