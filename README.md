@@ -5,19 +5,27 @@ client (in a FIFO fashion) can also send data to the serial port.
 
 ![architecture diagram](docs/arch.png?raw=true)
 
-## Build
+## Prerequisites
 
+Install GStreamer:
+```shell
+$ apt-get install libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
 ```
-sudo apt-get install libyaml-dev
+
+Install libYAML:
+```
+$ sudo apt-get install libyaml-dev
 ```
 
 [future](https://pypi.org/project/future/) is required to generate MAVLink headers.
 ```shell
-pip3 install future
+$ pip3 install future
 ```
 
+## Build
+
 ```shell
-make all
+$ make
 ```
 
 ## Usage
