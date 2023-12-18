@@ -53,6 +53,28 @@ gst_data_t data;
 
 static bool terminate = false;
 
+static GstPadProbeReturn eos_handler(GstPad *pad,
+                                     GstPadProbeInfo *info,
+                                     gst_data_t *data)
+{
+    if (GST_EVENT_TYPE(info->data) == GST_EVENT_EOS) {
+        /* Video saving request */
+        if (data->busy == true) {
+            data->busy = false;
+            printf("[Camera %d] %s is saved!\n", data->camera_id,
+                   data->mp4_file_name);
+            g_object_set(G_OBJECT(data->mp4_osel), "active-pad",
+                         data->osel_src2, NULL);
+
+            /* Program termination request */
+            if (terminate)
+                exit(0);
+        }
+    }
+
+    return GST_PAD_PROBE_OK;
+}
+
 static void pad_added_handler(GstElement *src, GstPad *pad, gst_data_t *data)
 {
     /* Get the sink pad */
@@ -140,7 +162,7 @@ void rtsp_stream_change_recording_state(int camera_id)
 
         /* Send end-of-stream (EOS) request */
         data.busy = true;
-        gst_element_send_event(data.mp4_queue, gst_event_new_eos());
+        gst_element_send_event(data.mp4_encoder, gst_event_new_eos());
     } else {
         printf("[Camera %d] Start recording...\n", camera_id);
 
@@ -176,7 +198,7 @@ void rtsp_stream_terminate(void)
     if (!terminate) {
         terminate = true;
         printf("Please wait for termination...\n");
-        gst_element_send_event(data.mp4_queue, gst_event_new_eos());
+        gst_element_send_event(data.mp4_encoder, gst_event_new_eos());
     }
 }
 
@@ -358,6 +380,12 @@ void *rtsp_stream_saver(void *args)
 
     g_object_set(G_OBJECT(data.mp4_osel), "active-pad", data.osel_src2, NULL);
 
+    GstPad *src_pad = gst_element_get_static_pad(data.mp4_mux, "src");
+    gst_pad_add_probe(src_pad, GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM,
+                      (GstPadProbeCallback) eos_handler, &data, NULL);
+
+    g_object_set(G_OBJECT(data.pipeline), "message-forward", TRUE, NULL);
+
     /*=================*
      * Start GStreamer *
      *=================*/
@@ -365,36 +393,8 @@ void *rtsp_stream_saver(void *args)
     printf("GStreamer: Start playing...\n");
     gst_element_set_state(data.pipeline, GST_STATE_PLAYING);
 
-    GstMessage *msg;
     GstBus *bus = gst_element_get_bus(data.pipeline);
-    while (1) {
-        msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE,
-                                         GST_MESSAGE_ERROR | GST_MESSAGE_EOS);
-
-        /* Video saving request */
-        if (data.busy == true) {
-            data.busy = false;
-            printf("[Camera %d] %s is saved!\n", data.camera_id,
-                   data.mp4_file_name);
-            g_object_set(G_OBJECT(data.mp4_osel), "active-pad", data.osel_src2,
-                         NULL);
-
-            /* Restart the pipeline */
-            gst_element_set_state(data.pipeline, GST_STATE_NULL);
-            gst_element_set_state(data.pipeline, GST_STATE_PLAYING);
-        }
-
-        if (GST_MESSAGE_TYPE(msg) == GST_MESSAGE_ERROR) {
-            printf(
-                "An error occurred! Re-run with the GST_DEBUG=*:WARN "
-                "environment \n"
-                "variable set for more details.\n");
-        }
-
-        /* Program termination request */
-        if (terminate)
-            break;
-    }
+    gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE, GST_MESSAGE_ERROR);
 
     printf("GStreamer: Bye!\n");
 
