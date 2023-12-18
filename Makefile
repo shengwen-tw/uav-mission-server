@@ -38,16 +38,16 @@ LDFLAGS += -lyaml
 TARGET = mission-server
 
 SRCS := \
-	main.c \
-        uart_server.c \
-	serial.c \
-	system.c \
-	fcu.c \
-	mavlink_parser.c \
-	mavlink_publisher.c \
-        siyi_camera.c \
-        rtsp_stream.c \
-        config.c
+	src/main.c \
+        src/uart_server.c \
+	src/serial.c \
+	src/system.c \
+	src/fcu.c \
+	src/mavlink_parser.c \
+	src/mavlink_publisher.c \
+        src/siyi_camera.c \
+        src/rtsp_stream.c \
+        src/config.c
 
 all: $(TARGET)
 
