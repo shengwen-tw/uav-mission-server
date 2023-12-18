@@ -11,46 +11,15 @@
 
 #define FCU_CHANNEL MAVLINK_COMM_1
 
-void mav_fcu_ping(mavlink_message_t *recvd_msg);
-void mav_fcu_gps_raw_int(mavlink_message_t *recvd_msg);
-void mav_fcu_rc_channels(mavlink_message_t *recvd_msg);
-void mav_fcu_autopilot_version(mavlink_message_t *recvd_msg);
-
 extern bool serial_workaround_verbose;
+static bool serial_status = false;
 
-struct mavlink_cmd fcu_cmds[] = {
-    DEF_MAVLINK_CMD(mav_fcu_ping, 4),
-    DEF_MAVLINK_CMD(mav_fcu_gps_raw_int, 24),
-    DEF_MAVLINK_CMD(mav_fcu_rc_channels, 65),
-    DEF_MAVLINK_CMD(mav_fcu_autopilot_version, 148),
-};
-
-mavlink_status_t fcu_status;
-mavlink_message_t fcu_msg;
-
-bool fcu_verbose = false;
-bool serial_status = false;
-
-void fcu_read_mavlink_msg(uint8_t *buf, size_t nbytes)
-{
-    const size_t msg_cnt = sizeof(fcu_cmds) / sizeof(struct mavlink_cmd);
-    for (int i = 0; i < nbytes; i++) {
-        if (mavlink_parse_char(FCU_CHANNEL, buf[i], &fcu_msg, &fcu_status) ==
-            1) {
-            parse_mavlink_msg(&fcu_msg, fcu_cmds, msg_cnt);
-        }
-    }
-
-    if (fcu_verbose)
-        status("FCU: Received undefined message #%d", fcu_msg.msgid);
-}
-
-void mav_fcu_ping(mavlink_message_t *recvd_msg)
+static void mav_fcu_ping(mavlink_message_t *recvd_msg)
 {
     status("FCU: Received ping message.");
 }
 
-void mav_fcu_gps_raw_int(mavlink_message_t *recvd_msg)
+static void mav_fcu_gps_raw_int(mavlink_message_t *recvd_msg)
 {
     mavlink_gps_raw_int_t gps_raw_int;
     mavlink_msg_gps_raw_int_decode(recvd_msg, &gps_raw_int);
@@ -79,7 +48,7 @@ void mav_fcu_gps_raw_int(mavlink_message_t *recvd_msg)
     //    status("FCU: Received gps_raw_int message.");
 }
 
-void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
+static void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
 {
 #define INC 0.3
 
@@ -199,11 +168,37 @@ void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
                            (int16_t) (cam_pitch * 10));
 }
 
-void mav_fcu_autopilot_version(mavlink_message_t *recvd_msg)
+static void mav_fcu_autopilot_version(mavlink_message_t *recvd_msg)
 {
     serial_status = true;
 
     status("FCU: received autopilot version message.");
+}
+
+static struct mavlink_cmd fcu_cmds[] = {
+    DEF_MAVLINK_CMD(mav_fcu_ping, 4),
+    DEF_MAVLINK_CMD(mav_fcu_gps_raw_int, 24),
+    DEF_MAVLINK_CMD(mav_fcu_rc_channels, 65),
+    DEF_MAVLINK_CMD(mav_fcu_autopilot_version, 148),
+};
+
+static mavlink_status_t fcu_status;
+static mavlink_message_t fcu_msg;
+
+static bool fcu_verbose = false;
+
+void fcu_read_mavlink_msg(uint8_t *buf, size_t nbytes)
+{
+    const size_t msg_cnt = sizeof(fcu_cmds) / sizeof(struct mavlink_cmd);
+    for (int i = 0; i < nbytes; i++) {
+        if (mavlink_parse_char(FCU_CHANNEL, buf[i], &fcu_msg, &fcu_status) ==
+            1) {
+            parse_mavlink_msg(&fcu_msg, fcu_cmds, msg_cnt);
+        }
+    }
+
+    if (fcu_verbose)
+        status("FCU: Received undefined message #%d", fcu_msg.msgid);
 }
 
 bool serial_is_ready(void)
