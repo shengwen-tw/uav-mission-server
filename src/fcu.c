@@ -1,7 +1,6 @@
 /* MAVLink parser for flight control unit (FCU) */
 
 #include <stdbool.h>
-#include "common.h"
 #include "config.h"
 #include "mavlink.h"
 #include "mavlink_parser.h"

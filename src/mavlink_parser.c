@@ -1,5 +1,4 @@
 #include "mavlink_parser.h"
-#include "common.h"
 #include "mavlink.h"
 
 void parse_mavlink_msg(mavlink_message_t *msg,

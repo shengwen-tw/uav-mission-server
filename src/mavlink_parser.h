@@ -9,10 +9,6 @@
         .handler = handler_function, .msg_id = id \
     }
 
-#define ENUM_MAVLINK_HANDLER(handler_function) handler_function##_ID
-
-#define CMD_LEN(list) (sizeof(list) / sizeof(struct mavlink_cmd))
-
 struct mavlink_cmd {
     uint16_t msg_id;
     void (*handler)(mavlink_message_t *msg);
