@@ -2,3 +2,4 @@ build/mission-server
 build/*.o
 build/*.d
 lib/mavlink/*
+*.sw*
