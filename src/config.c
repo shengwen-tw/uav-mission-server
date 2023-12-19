@@ -127,6 +127,7 @@ static void load_siyi_configs(char *yaml_path, config_siyi_t *config)
             READ_PARAM(key, "rtsp_stream_url", TYPE_STRING,
                        &config->rtsp_stream_url);
             READ_PARAM(key, "video_format", TYPE_STRING, &config->video_format);
+            READ_PARAM(key, "codec", TYPE_STRING, &config->codec);
             READ_PARAM(key, "image_width", TYPE_INT, &config->image_width);
             READ_PARAM(key, "image_height", TYPE_INT, &config->image_height);
             READ_PARAM(key, "siyi_camera_ip", TYPE_STRING,
@@ -243,10 +244,14 @@ void get_config_param(char *name, void *retval)
             *(char **) retval = config->board;
         } else if (strcmp("video_format", name) == 0) {
             *(char **) retval = config->video_format;
+        } else if (strcmp("codec", name) == 0) {
+            *(char **) retval = config->codec;
         } else if (strcmp("image_width", name) == 0) {
             *(int *) retval = config->image_width;
         } else if (strcmp("image_height", name) == 0) {
             *(int *) retval = config->image_height;
+        } else if (strcmp("codec", name) == 0) {
+            *(char **) retval = config->codec;
         } else if (strcmp("siyi_camera_ip", name) == 0) {
             *(char **) retval = config->siyi_camera_ip;
         } else if (strcmp("siyi_camera_port", name) == 0) {

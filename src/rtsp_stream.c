@@ -204,6 +204,21 @@ void rtsp_stream_terminate(void)
 
 void *rtsp_stream_saver(void *args)
 {
+    char *codec = "";
+    get_config_param("codec", &codec);
+
+    if (strcmp("h264", codec) && strcmp("h265", codec)) {
+        fprintf(stderr, "Invalid codec \"%s\"\n", codec);
+        exit(1);
+    }
+
+    char depay[20];
+    char parser[20];
+    char decoder[20];
+    snprintf(depay, sizeof(depay), "rtp%sdepay", codec);
+    snprintf(parser, sizeof(parser), "%sparse", codec);
+    snprintf(decoder, sizeof(decoder), "avdec_%s", codec);
+
     char *board_name = "";
     get_config_param("board", &board_name);
 
@@ -238,13 +253,12 @@ void *rtsp_stream_saver(void *args)
 
     /* JPEG branch components */
     data.jpg_queue = gst_element_factory_make("queue", "jpg_queue");
-    data.jpg_depay = gst_element_factory_make("rtph265depay", "jpg_depay");
-    data.jpg_parse = gst_element_factory_make("h265parse", "jpg_parse");
+    data.jpg_depay = gst_element_factory_make(depay, "jpg_depay");
+    data.jpg_parse = gst_element_factory_make(parser, "jpg_parse");
     if (rb5_codec)
         data.jpg_decoder = gst_element_factory_make("qtivdec", "jpg_decoder");
     else
-        data.jpg_decoder =
-            gst_element_factory_make("avdec_h265", "jpg_decoder");
+        data.jpg_decoder = gst_element_factory_make(decoder, "jpg_decoder");
     data.jpg_convert = gst_element_factory_make("videoconvert", "jpg_convert");
     data.jpg_scale = gst_element_factory_make("videoscale", "jpg_scale");
     data.jpg_encoder = gst_element_factory_make("jpegenc", "jpg_encoder");
@@ -252,13 +266,12 @@ void *rtsp_stream_saver(void *args)
 
     /* MP4 branch components */
     data.mp4_queue = gst_element_factory_make("queue", "mp4_queue");
-    data.mp4_depay = gst_element_factory_make("rtph265depay", "mp4_depay");
-    data.mp4_parse = gst_element_factory_make("h265parse", "mp4_parse");
+    data.mp4_depay = gst_element_factory_make(depay, "mp4_depay");
+    data.mp4_parse = gst_element_factory_make(parser, "mp4_parse");
     if (rb5_codec)
         data.mp4_decoder = gst_element_factory_make("qtivdec", "mp4_decoder");
     else
-        data.mp4_decoder =
-            gst_element_factory_make("avdec_h265", "mp4_decoder");
+        data.mp4_decoder = gst_element_factory_make(decoder, "mp4_decoder");
     data.mp4_convert = gst_element_factory_make("videoconvert", "mp4_convert");
     data.mp4_scale = gst_element_factory_make("videoscale", "mp4_scale");
     data.mp4_encoder = gst_element_factory_make("x264enc", "mp4_encoder");

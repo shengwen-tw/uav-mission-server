@@ -10,6 +10,7 @@ typedef struct {
 
     char *rtsp_stream_url;
     char *video_format;
+    char *codec;
     int image_width;
     int image_height;
 
