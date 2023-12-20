@@ -34,7 +34,7 @@ $ make
 **Start Video Streaming:**
 
 ```shell
-$ scripts/stream.sh
+$ scripts/streaming-server.sh
 ```
 
 **Launch Mission Server:**
