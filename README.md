@@ -9,12 +9,12 @@ client (in a FIFO fashion) can also send data to the serial port.
 
 Install GStreamer:
 ```shell
-$ apt-get install libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+$ sudo apt install libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
 ```
 
 Install libYAML:
 ```
-$ sudo apt-get install libyaml-dev
+$ sudo apt install libyaml-dev
 ```
 
 [future](https://pypi.org/project/future/) is required to generate MAVLink headers.
@@ -30,13 +30,19 @@ $ make
 
 ## Usage
 
-**Server:**
+**Start Video Streaming:**
 
-```shell
-$ build/mission-server -d device -c device-config-file -s serial_port -b config_str [-p tcp_port] [-r,--print-rc]
+```
+$ ./scripts/stream.sh
 ```
 
-**Commander:**
+**Launch Mission Server:**
+
+```shell
+$ ./build/mission-server -d device -c device_config_file -s serial_port -b config_str [-p tcp_port] [-r,--print-rc]
+```
+
+**Command Sending (The server must be launched first):**
 
 To play a tune with designated track number:
 
