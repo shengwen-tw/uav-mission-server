@@ -88,6 +88,9 @@ struct ClientNode {
         *next; /* Pointer to the next client node in the clients list */
 };
 
+SerialFd serial;
+pthread_mutex_t serial_tx_mtx;
+
 mavlink_status_t mavlink_status;
 mavlink_message_t recvd_msg;
 
@@ -597,7 +600,9 @@ static void handle_commanding_client(SerialFd sport)
         return;
     }
 
+    pthread_mutex_lock(&serial_tx_mtx);
     serial_write(sport, g_cache, (size_t) rbytes);
+    pthread_mutex_unlock(&serial_tx_mtx);
 }
 
 /* Pipe ends used to signal that we should gracefully shut down on POSIX systems
@@ -701,8 +706,8 @@ void *run_uart_server(void *args)
             } else {
                 siyi_cam_open();
 
-                SerialFd serial =
-                    serial_open(g_serial_path, &cfg, SERIAL_TIMEOUT);
+                pthread_mutex_init(&serial_tx_mtx, NULL);
+                serial = serial_open(g_serial_path, &cfg, SERIAL_TIMEOUT);
 
                 siyi_cam_gimbal_centering();
                 siyi_cam_manual_zoom(0x01, 0);

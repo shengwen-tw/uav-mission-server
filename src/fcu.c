@@ -167,6 +167,27 @@ static void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
                            (int16_t) (cam_pitch * 10));
 }
 
+void mav_command_long(mavlink_message_t *recvd_msg)
+{
+    /* Decode command_long message */
+    mavlink_command_long_t mav_cmd_long;
+    mavlink_msg_command_long_decode(recvd_msg, &mav_cmd_long);
+
+    printf("[INFO] received command_long message (command = %d).\n",
+           mav_cmd_long.command);
+
+    switch (mav_cmd_long.command) {
+    case MAV_CMD_DO_SET_ROI_LOCATION: /* 195 */
+        break;
+    case MAV_CMD_DO_SET_ROI_NONE: /* 197 */
+        break;
+    case MAV_CMD_REQUEST_MESSAGE: /* 512 */
+        break;
+    case MAV_CMD_REQUEST_CAMERA_INFORMATION: /* 521 */
+        break;
+    }
+}
+
 static void mav_fcu_autopilot_version(mavlink_message_t *recvd_msg)
 {
     serial_status = true;
@@ -178,6 +199,7 @@ static struct mavlink_cmd fcu_cmds[] = {
     DEF_MAVLINK_CMD(mav_fcu_ping, 4),
     DEF_MAVLINK_CMD(mav_fcu_gps_raw_int, 24),
     DEF_MAVLINK_CMD(mav_fcu_rc_channels, 65),
+    DEF_MAVLINK_CMD(mav_command_long, 76),
     DEF_MAVLINK_CMD(mav_fcu_autopilot_version, 148),
 };
 

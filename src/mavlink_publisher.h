@@ -3,6 +3,7 @@
 
 #include "serial.h"
 
+void *mavlink_tx_thread(void *args);
 void mavlink_send_play_tune(int tune_num, int fd);
 void mavlink_send_request_autopilot_capabilities(int fd);
 void mavlink_send_ping(int fd);

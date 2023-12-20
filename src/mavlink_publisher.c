@@ -1,5 +1,9 @@
 #include <math.h>
+#include <pthread.h>
+#include <unistd.h>
+
 #include "config.h"
+#include "fcu.h"
 #include "mavlink.h"
 #include "serial.h"
 #include "util.h"
@@ -7,6 +11,9 @@
 #define FCU_ID 1
 #define RB5_ID 2
 #define TUNE_CNT 19
+
+extern SerialFd serial;
+extern pthread_mutex_t serial_tx_mtx;
 
 extern bool serial_workaround_verbose;
 
@@ -42,7 +49,25 @@ void mavlink_send_msg(mavlink_message_t *msg, int fd)
     uint8_t buf[MAVLINK_MAX_PACKET_LEN];
     size_t len = mavlink_msg_to_send_buffer(buf, msg);
 
+    pthread_mutex_lock(&serial_tx_mtx);
     serial_write(fd, buf, len);
+    pthread_mutex_unlock(&serial_tx_mtx);
+}
+
+void mavlink_send_camera_hearbeart(int fd)
+{
+    uint8_t sys_id = FCU_ID;
+    uint8_t component_id = MAV_COMP_ID_CAMERA;
+    uint8_t type = MAV_TYPE_CAMERA;
+    uint8_t autopilot = MAV_AUTOPILOT_INVALID;
+    uint8_t base_mode = 0;
+    uint32_t custom_mode = 0;
+    uint8_t sys_status = MAV_STATE_STANDBY;
+
+    mavlink_message_t msg;
+    mavlink_msg_heartbeat_pack(sys_id, component_id, &msg, type, autopilot,
+                               base_mode, custom_mode, sys_status);
+    mavlink_send_msg(&msg, fd);
 }
 
 void mavlink_send_play_tune(int tune_num, int fd)
@@ -149,7 +174,7 @@ void mavlink_send_gimbal_manager_info(int fd)
 void mavlink_send_camera_info(int fd)
 {
     uint8_t sys_id = RB5_ID;
-    uint8_t component_id = MAV_COMP_ID_ONBOARD_COMPUTER;
+    uint8_t component_id = MAV_COMP_ID_CAMERA;
 
     uint32_t time_boot_ms = 0;
     uint8_t *vendor_name = (uint8_t *) get_camera_vendor_name();
@@ -173,4 +198,35 @@ void mavlink_send_camera_info(int fd)
         resolution_h, resolution_v, lens_id, flags, cam_definition_version,
         cam_definition_uri, gimbal_device_id);
     mavlink_send_msg(&msg, fd);
+}
+
+#define MSG_SCHEDULER_INIT(freq)          \
+    double timer_##freq = get_time_sec(); \
+    double period_##freq = 1.0 / (double) freq;
+
+#define MSG_SEND_HZ(freq, expressions)                     \
+    double now_##freq = get_time_sec();                    \
+    double elapsed_##freq = (now_##freq) - (timer_##freq); \
+    if ((elapsed_##freq) >= (period_##freq)) {             \
+        (timer_##freq) = (now_##freq);                     \
+        expressions                                        \
+    }
+
+void *mavlink_tx_thread(void *args)
+{
+    while (!serial_is_ready())
+        sleep(1);
+
+    MSG_SCHEDULER_INIT(1); /* 1Hz */
+
+    while (1) {
+        /* clang-format off */
+        MSG_SEND_HZ(1,
+            mavlink_send_camera_hearbeart(serial);
+        );
+        /* clang-format on */
+
+        /* Limit CPU usage of the thread with execution frequency of 100Hz */
+        usleep(10000); /* 10000us = 10ms */
+    }
 }

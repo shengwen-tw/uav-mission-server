@@ -10,6 +10,7 @@
 
 #include "config.h"
 #include "mavlink.h"
+#include "mavlink_publisher.h"
 #include "rtsp_stream.h"
 #include "system.h"
 #include "uart_server.h"
@@ -60,10 +61,14 @@ void run_server(void)
     pthread_t uart_server_tid;
     pthread_create(&uart_server_tid, NULL, run_uart_server, NULL);
 
+    pthread_t mavlink_tx_tid;
+    pthread_create(&mavlink_tx_tid, NULL, mavlink_tx_thread, NULL);
+
     pthread_t gstreamer_tid;
     pthread_create(&gstreamer_tid, NULL, rtsp_stream_saver, NULL);
 
     pthread_join(uart_server_tid, NULL);
+    pthread_join(mavlink_tx_tid, NULL);
     pthread_join(gstreamer_tid, NULL);
 }
 
