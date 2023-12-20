@@ -1,7 +1,8 @@
 # UAV Mission Server
 
-A simple program that serves a serial port over TCP to multiple clients. The first connected
-client (in a FIFO fashion) can also send data to the serial port.
+The UAV mission server functions as a go-between for the flight control unit and the UAV mission,
+enabling multiple clients to communicate via a serial port over TCP and processing ground control commands using the MAVLink protocol.
+This server permits the initial client that connects (following a first-come, first-served approach) to send data to the serial port.
 
 ![architecture diagram](docs/arch.png?raw=true)
 
