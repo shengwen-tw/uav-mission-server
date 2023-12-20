@@ -13,7 +13,7 @@ $ sudo apt install libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
 ```
 
 Install libYAML:
-```
+```shell
 $ sudo apt install libyaml-dev
 ```
 
@@ -32,22 +32,22 @@ $ make
 
 **Start Video Streaming:**
 
-```
-$ ./scripts/stream.sh
+```shell
+$ scripts/stream.sh
 ```
 
 **Launch Mission Server:**
 
 ```shell
-$ ./build/mission-server -d device -c device_config_file -s serial_port -b config_str [-p tcp_port] [-r,--print-rc]
+$ build/mission-server -d device -c device_config_file -s serial_port -b config_str [-p tcp_port] [-r,--print-rc]
 ```
 
 **Command Sending (The server must be launched first):**
 
 To play a tune with designated track number:
 
-```
-$ ./mission-server --send-tune track-number
+```shell
+$ build/mission-server --send-tune track-number
 ```
 
 ### Arguments
