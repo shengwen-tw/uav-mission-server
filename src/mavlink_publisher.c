@@ -21,7 +21,7 @@ extern bool serial_workaround_verbose;
  * https://github.com/PX4/PX4-Autopilot/blob/main/src/lib/tunes/tune_definition.desc#L89C44-L89C90
  */
 /* clang-format off */
-char *tune_table[TUNE_CNT] = {
+static const char *tune_table[TUNE_CNT] = {
     "MFT240L8 O4aO5dc O4aO5dc O4aO5dc L16dcdcdcdc", /*   0: startup tune             */
     "MBT200a8a8a8PaaaP",                            /*   1: ERROR tone               */
     "MFT200e8a8a",                                  /*   2: Notify Positive tone     */
@@ -44,7 +44,7 @@ char *tune_table[TUNE_CNT] = {
 };
 /* clang-format on */
 
-void mavlink_send_msg(mavlink_message_t *msg, int fd)
+static void mavlink_send_msg(const mavlink_message_t *msg, int fd)
 {
     uint8_t buf[MAVLINK_MAX_PACKET_LEN];
     size_t len = mavlink_msg_to_send_buffer(buf, msg);
@@ -54,7 +54,7 @@ void mavlink_send_msg(mavlink_message_t *msg, int fd)
     pthread_mutex_unlock(&serial_tx_mtx);
 }
 
-void mavlink_send_camera_hearbeart(int fd)
+static void mavlink_send_camera_hearbeart(int fd)
 {
     uint8_t sys_id = FCU_ID;
     uint8_t component_id = MAV_COMP_ID_CAMERA;

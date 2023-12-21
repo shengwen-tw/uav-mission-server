@@ -167,7 +167,7 @@ static void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
                            (int16_t) (cam_pitch * 10));
 }
 
-void mav_command_long(mavlink_message_t *recvd_msg)
+static void mav_command_long(mavlink_message_t *recvd_msg)
 {
     /* Decode command_long message */
     mavlink_command_long_t mav_cmd_long;
