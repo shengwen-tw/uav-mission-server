@@ -104,7 +104,7 @@ bool serial_workaround_verbose = true;
  *
  * @return
  */
-static int get_unsigned(const char *s, size_t len, unsigned *o_result)
+static bool get_unsigned(const char *s, size_t len, unsigned *o_result)
 {
     unsigned helper;
 
