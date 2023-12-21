@@ -51,25 +51,20 @@ typedef struct {
 
 gst_data_t data;
 
-static bool terminate = false;
-
 static GstPadProbeReturn eos_handler(GstPad *pad,
                                      GstPadProbeInfo *info,
                                      gst_data_t *data)
 {
-    if (GST_EVENT_TYPE(info->data) == GST_EVENT_EOS) {
-        /* Video saving request */
-        if (data->busy == true) {
-            data->busy = false;
-            printf("[Camera %d] %s is saved!\n", data->camera_id,
-                   data->mp4_file_name);
-            g_object_set(G_OBJECT(data->mp4_osel), "active-pad",
-                         data->osel_src2, NULL);
+    if (GST_EVENT_TYPE(info->data) != GST_EVENT_EOS)
+        return GST_PAD_PROBE_OK;
 
-            /* Program termination request */
-            if (terminate)
-                exit(0);
-        }
+    /* Video saving request */
+    if (data->busy == true) {
+        data->busy = false;
+        printf("[Camera %d] %s is saved!\n", data->camera_id,
+               data->mp4_file_name);
+        g_object_set(G_OBJECT(data->mp4_osel), "active-pad", data->osel_src2,
+                     NULL);
     }
 
     return GST_PAD_PROBE_OK;
@@ -187,19 +182,6 @@ void rtsp_stream_change_recording_state(int camera_id)
     }
 
     data.recording = !data.recording;
-}
-
-void rtsp_stream_terminate(void)
-{
-    if (!data.recording)
-        exit(0);
-
-    /* Terminate the entire program */
-    if (!terminate) {
-        terminate = true;
-        printf("Please wait for termination...\n");
-        gst_element_send_event(data.mp4_encoder, gst_event_new_eos());
-    }
 }
 
 void *rtsp_stream_saver(void *args)
