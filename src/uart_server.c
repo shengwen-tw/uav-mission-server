@@ -716,99 +716,94 @@ void *run_uart_server(void *args)
     g_waiters[EVENT_USER_CMD_INDEX].fd = cmd_fifo_r;
     g_waiters[EVENT_CLIENT_INDEX].fd = -1;
 
-    size_t event_idx = 0;
-    for (event_idx = 0; event_idx < EVENT_INDEX_COUNT_MAX; ++event_idx)
+    for (size_t event_idx = 0; event_idx < EVENT_INDEX_COUNT_MAX; ++event_idx)
         g_waiters[event_idx].events = POLLIN;
 
-    if (event_idx == EVENT_INDEX_COUNT_MAX) {
-        /* Register for application termination requests to allow graceful
-         * shut down
-         */
-        signal(SIGINT, sig_handler);
-        signal(SIGABRT, sig_handler);
-        signal(SIGTERM, sig_handler);
+    /* Register for application termination requests to allow graceful
+     * shut down
+     */
+    signal(SIGINT, sig_handler);
+    signal(SIGABRT, sig_handler);
+    signal(SIGTERM, sig_handler);
 
-        /* Workaround for running in mintty (doesn't really matter everywhere
-         * else because we don't print that much)
-         */
-        setbuf(stdout, NULL);
+    /* Workaround for running in mintty (doesn't really matter everywhere
+     * else because we don't print that much)
+     */
+    setbuf(stdout, NULL);
 
-        status(
-            "Serving %s @ %u bps (parity %s, %d data bits, "
-            "and %s stop bits) on port %u",
-            g_serial_path, cfg.baudrate, parity_to_string(cfg.parity),
-            cfg.data_bits, stop_bits_to_string(cfg.stop_bits), port);
+    status(
+        "Serving %s @ %u bps (parity %s, %d data bits, "
+        "and %s stop bits) on port %u",
+        g_serial_path, cfg.baudrate, parity_to_string(cfg.parity),
+        cfg.data_bits, stop_bits_to_string(cfg.stop_bits), port);
 
-        /* Workaround for RB5's buggy serial port */
-        while (!serial_is_ready()) {
-            flush_serial_until_ready(serial);
-            usleep(500000);  // 500ms
-            wait_serial_flushing_complete(serial);
-        }
-
-        status("RB5's serial port flushing complete.");
-
-        mavlink_send_ping(serial);
-
-        /* Main server loop */
-        for (;;) {
-            int result = poll(g_waiters, EVENT_INDEX_COUNT_MAX, -1);
-
-            if ((result < 0) && (errno != EINTR)) {
-                error("Failed to wait on event: %d (%s)", errno,
-                      strerror(errno));
-                break;
-            }
-
-            /* Break if we were requested to shut down */
-            if (g_waiters[EVENT_CLOSE_INDEX].revents &
-                (POLLIN | POLLHUP | POLLERR)) {
-                /* Exit with 0 exit code on graceful shut down */
-                ret_val = EXIT_SUCCESS;
-                break;
-            }
-
-            if (g_waiters[EVENT_CLIENT_INDEX].revents & (POLLHUP | POLLERR)) {
-                terminate_client(g_clients, &g_clients);
-            } else if (g_waiters[EVENT_CLIENT_INDEX].revents & POLLIN) {
-                handle_commanding_client(serial);
-                g_waiters[EVENT_CLIENT_INDEX].revents = 0;
-            }
-
-            if (g_waiters[EVENT_SERVER_INDEX].revents & POLLIN) {
-                accept_client(server);
-                g_waiters[EVENT_SERVER_INDEX].revents = 0;
-            }
-
-            if (g_waiters[EVENT_SERIAL_INDEX].revents & POLLIN) {
-                send_data_to_clients(serial);
-                g_waiters[EVENT_SERIAL_INDEX].revents = 0;
-            }
-
-            /* Event of receiving user commands */
-            if (g_waiters[EVENT_USER_CMD_INDEX].revents & POLLIN) {
-                read_user_cmd(serial);
-                g_waiters[EVENT_USER_CMD_INDEX].revents = 0;
-            }
-
-            /* Check if we need to listen for a new commanding client */
-            if ((g_clients) && (g_commanding_client != g_clients->id)) {
-                g_waiters[EVENT_CLIENT_INDEX].fd = g_clients->client;
-                g_waiters[EVENT_CLIENT_INDEX].revents = 0;
-
-                g_commanding_client = g_clients->id;
-
-                status(
-                    "Client %d @ %s:%u is now in command of the serial port",
-                    g_clients->id, ipaddr_to_string(g_clients->addr),
-                    g_clients->port);
-            }
-        }
-
-        /* Gracefully shut down all clients */
-        while (g_clients)
-            terminate_client(g_clients, &g_clients);
+    /* Workaround for RB5's buggy serial port */
+    while (!serial_is_ready()) {
+        flush_serial_until_ready(serial);
+        usleep(500000);  // 500ms
+        wait_serial_flushing_complete(serial);
     }
+
+    status("RB5's serial port flushing complete.");
+
+    mavlink_send_ping(serial);
+
+    /* Main server loop */
+    for (;;) {
+        int result = poll(g_waiters, EVENT_INDEX_COUNT_MAX, -1);
+
+        if ((result < 0) && (errno != EINTR)) {
+            error("Failed to wait on event: %d (%s)", errno, strerror(errno));
+            break;
+        }
+
+        /* Break if we were requested to shut down */
+        if (g_waiters[EVENT_CLOSE_INDEX].revents &
+            (POLLIN | POLLHUP | POLLERR)) {
+            /* Exit with 0 exit code on graceful shut down */
+            ret_val = EXIT_SUCCESS;
+            break;
+        }
+
+        if (g_waiters[EVENT_CLIENT_INDEX].revents & (POLLHUP | POLLERR)) {
+            terminate_client(g_clients, &g_clients);
+        } else if (g_waiters[EVENT_CLIENT_INDEX].revents & POLLIN) {
+            handle_commanding_client(serial);
+            g_waiters[EVENT_CLIENT_INDEX].revents = 0;
+        }
+
+        if (g_waiters[EVENT_SERVER_INDEX].revents & POLLIN) {
+            accept_client(server);
+            g_waiters[EVENT_SERVER_INDEX].revents = 0;
+        }
+
+        if (g_waiters[EVENT_SERIAL_INDEX].revents & POLLIN) {
+            send_data_to_clients(serial);
+            g_waiters[EVENT_SERIAL_INDEX].revents = 0;
+        }
+
+        /* Event of receiving user commands */
+        if (g_waiters[EVENT_USER_CMD_INDEX].revents & POLLIN) {
+            read_user_cmd(serial);
+            g_waiters[EVENT_USER_CMD_INDEX].revents = 0;
+        }
+
+        /* Check if we need to listen for a new commanding client */
+        if ((g_clients) && (g_commanding_client != g_clients->id)) {
+            g_waiters[EVENT_CLIENT_INDEX].fd = g_clients->client;
+            g_waiters[EVENT_CLIENT_INDEX].revents = 0;
+
+            g_commanding_client = g_clients->id;
+
+            status("Client %d @ %s:%u is now in command of the serial port",
+                   g_clients->id, ipaddr_to_string(g_clients->addr),
+                   g_clients->port);
+        }
+    }
+
+    /* Gracefully shut down all clients */
+    while (g_clients)
+        terminate_client(g_clients, &g_clients);
 
     /* Close both ends of shut down pipe */
     close(g_close[0]);
