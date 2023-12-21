@@ -8,9 +8,10 @@
 #include "serial.h"
 #include "util.h"
 
-#define FCU_ID 1
-#define RB5_ID 2
-#define TUNE_CNT 19
+enum {
+    FCU_ID = 1,
+    RB5_ID,
+};
 
 extern SerialFd serial;
 extern pthread_mutex_t serial_tx_mtx;
@@ -21,7 +22,7 @@ extern bool serial_workaround_verbose;
  * https://github.com/PX4/PX4-Autopilot/blob/main/src/lib/tunes/tune_definition.desc#L89C44-L89C90
  */
 /* clang-format off */
-static const char *tune_table[TUNE_CNT] = {
+static const char *tune_table[] = {
     "MFT240L8 O4aO5dc O4aO5dc O4aO5dc L16dcdcdcdc", /*   0: startup tune             */
     "MBT200a8a8a8PaaaP",                            /*   1: ERROR tone               */
     "MFT200e8a8a",                                  /*   2: Notify Positive tone     */
@@ -43,6 +44,8 @@ static const char *tune_table[TUNE_CNT] = {
     "MFT255a8g8f8e8c8<b8a8g4",                      /*  18: When pressing off button */
 };
 /* clang-format on */
+
+#define TUNE_CNT ARRAY_SIZE(tune_table)
 
 static void mavlink_send_msg(const mavlink_message_t *msg, int fd)
 {

@@ -3,6 +3,8 @@
 
 #include <sys/time.h>
 
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
+
 static inline void bound_float(float *val, float max, float min)
 {
     if (*val > max)
