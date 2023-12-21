@@ -1,9 +1,11 @@
 /* MAVLink parser for flight control unit (FCU) */
 
 #include <stdbool.h>
+
 #include "config.h"
 #include "mavlink.h"
 #include "mavlink_parser.h"
+#include "mavlink_publisher.h"
 #include "rtsp_stream.h"
 #include "siyi_camera.h"
 #include "util.h"
@@ -177,13 +179,12 @@ static void mav_command_long(mavlink_message_t *recvd_msg)
            mav_cmd_long.command);
 
     switch (mav_cmd_long.command) {
-    case MAV_CMD_DO_SET_ROI_LOCATION: /* 195 */
-        break;
-    case MAV_CMD_DO_SET_ROI_NONE: /* 197 */
-        break;
-    case MAV_CMD_REQUEST_MESSAGE: /* 512 */
+    case MAV_CMD_DO_DIGICAM_CONTROL: /* 203 */
+        rtsp_stream_save_image(0);
         break;
     case MAV_CMD_REQUEST_CAMERA_INFORMATION: /* 521 */
+        status("Ground station requesting camera information.");
+        mavlink_request_camera_info();
         break;
     }
 }

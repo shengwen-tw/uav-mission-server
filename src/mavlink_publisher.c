@@ -189,7 +189,9 @@ void mavlink_send_camera_info(int fd)
     uint16_t resolution_h = 0;      // pix, 0 if unknown
     uint16_t resolution_v = 0;      // pix, 0 if unknown
     uint8_t lens_id = 0;            // 0 if unknown
-    uint32_t flags = CAMERA_CAP_FLAGS_CAPTURE_IMAGE;
+    uint32_t flags = CAMERA_CAP_FLAGS_CAPTURE_IMAGE |
+                     CAMERA_CAP_FLAGS_CAPTURE_VIDEO |
+                     CAMERA_CAP_FLAGS_HAS_MODES;
     uint16_t cam_definition_version = 0;
     char *cam_definition_uri = "";
     uint8_t gimbal_device_id = 1;  // Gimbal's ID associates with the camera
@@ -201,6 +203,25 @@ void mavlink_send_camera_info(int fd)
         resolution_h, resolution_v, lens_id, flags, cam_definition_version,
         cam_definition_uri, gimbal_device_id);
     mavlink_send_msg(&msg, fd);
+}
+
+static bool camera_request = false;
+
+void mavlink_request_camera_info(void)
+{
+    camera_request = true;
+}
+
+void mavlink_camera_microservice_handler(void)
+{
+    if (!camera_request)
+        return;
+
+    camera_request = false;
+    mavlink_send_ack(serial, MAV_CMD_REQUEST_CAMERA_INFORMATION,
+                     MAV_RESULT_ACCEPTED, 100, 0);
+    mavlink_send_camera_info(serial);
+    status("Reply camera information.");
 }
 
 #define MSG_SCHEDULER_INIT(freq)          \
@@ -228,6 +249,9 @@ void *mavlink_tx_thread(void *args)
             mavlink_send_camera_hearbeart(serial);
         );
         /* clang-format on */
+
+        /* Microservices */
+        mavlink_camera_microservice_handler();
 
         /* Limit CPU usage of the thread with execution frequency of 100Hz */
         usleep(10000); /* 10000us = 10ms */
