@@ -13,7 +13,7 @@ enum {
     RB5_ID,
 };
 
-extern SerialFd serial;
+extern serial_t serial;
 extern pthread_mutex_t serial_tx_mtx;
 
 extern bool serial_workaround_verbose;

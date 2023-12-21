@@ -1,31 +1,31 @@
-/************************************************************************************
- * serial.h -
- *  A wrapper over platform-specific serial port functionality.
+/*
+ * serial.h - A wrapper over platform-specific serial port functionality.
  *
- *   Copyright (c) 2018 Isaac Garzon
+ * Copyright (c) 2018 Isaac Garzon
  *
- *   Permission is hereby granted, free of charge, to any person obtaining a
- *copy of this software and associated documentation files (the "Software"), to
- *deal in the Software without restriction, including without limitation the
- *rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
- *sell copies of the Software, and to permit persons to whom the Software is
- *   furnished to do so, subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
  *
- *   The above copyright notice and this permission notice shall be included in
- *all copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
- *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- *   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- *   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- *FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
- *IN THE SOFTWARE.
- ************************************************************************************/
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
 
 #ifndef INCLUDE_GUARD_7AF18658_33EE_48A2_999F_02F5D03895F9
 #define INCLUDE_GUARD_7AF18658_33EE_48A2_999F_02F5D03895F9
 
+#include <stdbool.h>
 #include <stddef.h>
 
 /**
@@ -37,24 +37,12 @@
 
 #define SERIAL_INVALID_FD INVALID_HANDLE_VALUE
 
-typedef HANDLE SerialFd;
+typedef HANDLE serial_t;
 #else /* if !defined(_WIN32) */
 #define SERIAL_INVALID_FD (-1)
 
-typedef int SerialFd;
+typedef int serial_t;
 #endif /* !defined(_WIN32) */
-
-#ifndef NULL
-#define NULL 0
-#endif /* !NULL */
-
-#ifndef FALSE
-#define FALSE 0
-#endif /* !FALSE */
-
-#ifndef TRUE
-#define TRUE (!FALSE)
-#endif /* !TRUE */
 
 enum SerialParity {
     e_parity_none,
@@ -73,10 +61,6 @@ struct SerialConfig {
     enum SerialStopBits stop_bits;
 };
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 /**
  * Opens a serial port.
  *
@@ -89,9 +73,9 @@ extern "C" {
  * @return          An OS handle to the open serial port if successful.
  * `SERIAL_INVALID_FD` otherwise.
  */
-extern SerialFd serial_open(const char *port_s,
-                            const struct SerialConfig *cfg,
-                            int timeout);
+serial_t serial_open(const char *port_s,
+                     const struct SerialConfig *cfg,
+                     int timeout);
 
 /**
  * Reads data from a serial port.
@@ -103,7 +87,7 @@ extern SerialFd serial_open(const char *port_s,
  * @return      The amount of bytes written into `o_buf` on success. -1 on
  * error.
  */
-extern long serial_read(SerialFd fd, unsigned char *o_buf, size_t size);
+long serial_read(serial_t fd, unsigned char *o_buf, size_t size);
 
 /**
  * Writes data into a serial port.
@@ -116,17 +100,13 @@ extern long serial_read(SerialFd fd, unsigned char *o_buf, size_t size);
  * @return      TRUE if all the bytes were successfully written into the serial
  * port. FALSE otherwise.
  */
-extern int serial_write(SerialFd fd, const unsigned char *buf, size_t size);
+bool serial_write(serial_t fd, const unsigned char *buf, size_t size);
 
 /**
  * Closes an open serial port.
  *
  * @param fd    A handle to an open serial port returned from `serial_open`.
  */
-extern void serial_close(SerialFd fd);
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
+void serial_close(serial_t fd);
 
 #endif /* !INCLUDE_GUARD_7AF18658_33EE_48A2_999F_02F5D03895F9 */

@@ -1,19 +1,13 @@
-/************************************************************************************
- * serial.c -
- *  A wrapper over platform-specific serial port functionality.
- */
-
-#include "serial.h"
-#include <stdio.h>
-#include <string.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+/* serial.c - A wrapper over platform-specific serial port functionality. */
 
 #include <fcntl.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
 #include <termios.h>
 #include <unistd.h>
+
+#include "serial.h"
 
 static int convert_baudrate(int baudrate)
 {
@@ -147,18 +141,17 @@ static int convert_baudrate(int baudrate)
     }
 }
 
-void serial_close(SerialFd fd)
+void serial_close(serial_t fd)
 {
-    if (fd != SERIAL_INVALID_FD) {
+    if (fd != SERIAL_INVALID_FD)
         close(fd);
-    }
 }
 
-SerialFd serial_open(const char *port_s,
+serial_t serial_open(const char *port_s,
                      const struct SerialConfig *cfg,
                      int timeout)
 {
-    SerialFd fd;
+    serial_t fd;
     int br = convert_baudrate(cfg->baudrate);
 
     if (br == B0) {
@@ -166,9 +159,8 @@ SerialFd serial_open(const char *port_s,
         return SERIAL_INVALID_FD;
     }
 
-    if (!port_s) {
+    if (!port_s)
         return SERIAL_INVALID_FD;
-    }
 
     fd = open(port_s, O_RDWR | O_NOCTTY | O_NONBLOCK);
 
@@ -262,36 +254,29 @@ SerialFd serial_open(const char *port_s,
     return fd;
 }
 
-long serial_read(SerialFd fd, unsigned char *o_buf, size_t size)
+long serial_read(serial_t fd, unsigned char *o_buf, size_t size)
 {
     long count = read(fd, o_buf, size);
 
-    if (count < 0) {
+    if (count < 0)
         return -1;
-    }
 
     return count;
 }
 
-int serial_write(SerialFd fd, const unsigned char *buf, size_t size)
+bool serial_write(serial_t fd, const unsigned char *buf, size_t size)
 {
     size_t written = 0;
 
     for (;;) {
         long w = write(fd, buf + written, size - written);
 
-        if (w < 0) {
-            return FALSE;
-        }
+        if (w < 0)
+            return false;
 
         written += (size_t) w;
 
-        if (written == size) {
-            return TRUE;
-        }
+        if (written == size)
+            return true;
     }
 }
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */

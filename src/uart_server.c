@@ -88,13 +88,11 @@ struct ClientNode {
         *next; /* Pointer to the next client node in the clients list */
 };
 
-SerialFd serial;
+serial_t serial;
 pthread_mutex_t serial_tx_mtx;
 
 mavlink_status_t mavlink_status;
-mavlink_message_t recvd_msg;
 
-mavlink_cmd user_cmd;
 bool serial_workaround_verbose = true;
 
 /**
@@ -110,29 +108,26 @@ static int get_unsigned(const char *s, size_t len, unsigned *o_result)
 {
     unsigned helper;
 
-    if ((!s) || (!len) || (!o_result)) {
-        return FALSE;
-    }
+    if ((!s) || (!len) || (!o_result))
+        return false;
 
     helper = *o_result = 0;
 
     do {
-        if (!isdigit(*s)) {
-            return FALSE;
-        }
+        if (!isdigit(*s))
+            return false;
 
         *o_result *= 10;
         *o_result += *s++ - '0';
 
         /* Make sure we didn't overflow */
-        if (*o_result < helper) {
-            return FALSE;
-        }
+        if (*o_result < helper)
+            return false;
 
         helper = *o_result;
     } while (--len);
 
-    return TRUE;
+    return true;
 }
 
 /**
@@ -149,9 +144,8 @@ static const char *parse_serial_config(const char *config_str,
     int cfg_idx = 0;
     const char *start = config_str;
 
-    if ((!config_str) || (!o_config)) {
+    if ((!config_str) || (!o_config))
         return "Internal program error";
-    }
 
     /* Initialise with default values */
     o_config->parity = SERIAL_CFG_DEFAULT_PARITY;
@@ -169,16 +163,14 @@ static const char *parse_serial_config(const char *config_str,
 
         next = strchr(start, ',');
 
-        if (!next) {
+        if (!next)
             next = start + strlen(start);
-        }
 
         end = next;
 
         /* Trim end */
-        while ((end > start) && (isspace(end[-1]))) {
+        while ((end > start) && (isspace(end[-1])))
             --end;
-        }
 
         /* Parse specific config elements */
         switch (cfg_idx) {
@@ -244,10 +236,8 @@ static const char *parse_serial_config(const char *config_str,
                 }
             }
 
-            if (end - start > 1) {
+            if (end - start > 1)
                 return "Data bits must be either empty or one of 5, 6, 7, or 8";
-            }
-
             break;
 
         case SERIAL_CFG_STOP_BITS_IDX:
@@ -455,9 +445,8 @@ static int accept_client(Socket server)
     struct ClientNode *new_client =
         (struct ClientNode *) malloc(sizeof(struct ClientNode));
 
-    if (!new_client) {
+    if (!new_client)
         goto cleanup;
-    }
 
     memset(new_client, 0, sizeof(*new_client));
 
@@ -481,26 +470,24 @@ static int accept_client(Socket server)
     } else {
         struct ClientNode *current = g_clients;
 
-        while (current->next) {
+        while (current->next)
             current = current->next;
-        }
 
         current->next = new_client;
     }
 
-    return TRUE;
+    return true;
 
 cleanup:
     if (new_client) {
-        if (new_client->client != 0) {
+        if (new_client->client != 0)
             closesocket(new_client->client);
-        }
 
         free(new_client);
         new_client = NULL;
     }
 
-    return FALSE;
+    return false;
 }
 
 /**
@@ -511,16 +498,14 @@ static struct ClientNode *terminate_client(struct ClientNode *node,
 {
     struct ClientNode *next;
 
-    if ((!node) || (!pointer) || (*pointer != node)) {
+    if ((!node) || (!pointer) || (*pointer != node))
         return NULL;
-    }
 
     status("Removing client %d...", node->id);
 
     /* Clear commanding client event wait */
-    if (node->id == g_commanding_client) {
+    if (node->id == g_commanding_client)
         g_waiters[EVENT_CLIENT_INDEX].fd = -1;
-    }
 
     /* Change the pointer of `pointer` before terminating the client
      * to make sure it never points to an invalid client */
@@ -539,14 +524,13 @@ static struct ClientNode *terminate_client(struct ClientNode *node,
 /**
  * A utility function that handles serial receive events.
  */
-static void send_data_to_clients(SerialFd sport)
+static void send_data_to_clients(serial_t sport)
 {
     struct ClientNode *current = g_clients, **previous = &g_clients;
     long rbytes = serial_read(sport, g_cache, sizeof(g_cache));
 
-    if (rbytes <= 0) {
+    if (rbytes <= 0)
         return;
-    }
 
     fcu_read_mavlink_msg(g_cache, rbytes);
 
@@ -576,14 +560,13 @@ static void send_data_to_clients(SerialFd sport)
 /**
  * A utility function that handles commanding client data.
  */
-static void handle_commanding_client(SerialFd sport)
+static void handle_commanding_client(serial_t sport)
 {
     long rbytes;
     static int last_commander = -1, tryout = 0;
 
-    if (!g_clients) {
+    if (!g_clients)
         return;
-    }
 
     if (last_commander != g_commanding_client) {
         last_commander = g_commanding_client;
@@ -593,9 +576,8 @@ static void handle_commanding_client(SerialFd sport)
     rbytes = recv(g_clients->client, (char *) g_cache, sizeof(g_cache), 0);
 
     if (rbytes <= 0) {
-        if (tryout++ == 3) {
+        if (tryout++ == 3)
             terminate_client(g_clients, &g_clients);
-        }
 
         return;
     }
@@ -626,10 +608,11 @@ static void sig_handler(int sig)
     }
 }
 
-void read_user_cmd(SerialFd sport)
+void read_user_cmd(serial_t sport)
 {
     /* Read user command from the FIFO */
     static int received = 0;
+    mavlink_cmd user_cmd;
     int rsize = read(cmd_fifo_r, (char *) &user_cmd + received,
                      sizeof(mavlink_cmd) - received);
     received += rsize;
@@ -647,19 +630,18 @@ void read_user_cmd(SerialFd sport)
     }
 }
 
-void flush_serial_until_ready(SerialFd sport)
+void flush_serial_until_ready(serial_t sport)
 {
     /* Send message to test if serial is ready to work */
     mavlink_send_request_autopilot_capabilities(sport);
 }
 
-void wait_serial_flushing_complete(SerialFd sport)
+void wait_serial_flushing_complete(serial_t sport)
 {
     /* Wait for FCU's reply */
     long rbytes = serial_read(sport, g_cache, sizeof(g_cache));
-    if (rbytes <= 0) {
+    if (rbytes <= 0)
         return;
-    }
     fcu_read_mavlink_msg(g_cache, rbytes);
 }
 
