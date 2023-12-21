@@ -35,7 +35,6 @@
 #include "mavlink_publisher.h"
 #include "rtsp_stream.h"
 #include "serial.h"
-#include "siyi_camera.h"
 #include "system.h"
 
 #define closesocket close
@@ -692,13 +691,8 @@ void *run_uart_server(void *args)
         goto terminate;
     }
 
-    siyi_cam_open();
-
     pthread_mutex_init(&serial_tx_mtx, NULL);
     serial = serial_open(g_serial_path, &cfg, SERIAL_TIMEOUT);
-
-    siyi_cam_gimbal_centering();
-    siyi_cam_manual_zoom(0x01, 0);
 
     if (serial == SERIAL_INVALID_FD) {
         error("Failed to open the requested serial port");
