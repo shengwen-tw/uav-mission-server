@@ -2,6 +2,12 @@
 #define __UART_SERVER_H__
 
 typedef struct {
+    char *serial_path;
+    char *serial_config;
+    char *net_port;
+} uart_server_args_t;
+
+typedef struct {
     int type;    // Command type
     int arg[4];  // In case the action require some parameters
 } mavlink_cmd;

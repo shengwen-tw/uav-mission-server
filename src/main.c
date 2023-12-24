@@ -12,15 +12,11 @@
 #include "mavlink.h"
 #include "mavlink_publisher.h"
 #include "rtsp_stream.h"
+#include "siyi_camera.h"
 #include "system.h"
 #include "uart_server.h"
 
 #define CMD_FIFO "/tmp/cmd_fifo"
-
-// FIXME: Pass directly into pthread
-extern char *g_serial_path;
-extern char *g_serial_config;
-extern char *g_net_port;
 
 extern int cmd_fifo_w, cmd_fifo_r;
 
@@ -43,7 +39,7 @@ void run_commander(const char *command)
     exit(0);
 }
 
-void run_server(void)
+void run_server(uart_server_args_t *uart_server_args)
 {
     /* create pid file */
     int mastr_pid = getpid();
@@ -59,7 +55,8 @@ void run_server(void)
 
     /* start the service */
     pthread_t uart_server_tid;
-    pthread_create(&uart_server_tid, NULL, run_uart_server, NULL);
+    pthread_create(&uart_server_tid, NULL, run_uart_server,
+                   (void *) uart_server_args);
 
     pthread_t mavlink_tx_tid;
     pthread_create(&mavlink_tx_tid, NULL, mavlink_tx_thread, NULL);
@@ -70,6 +67,13 @@ void run_server(void)
     pthread_join(uart_server_tid, NULL);
     pthread_join(mavlink_tx_tid, NULL);
     pthread_join(gstreamer_tid, NULL);
+}
+
+static void device_init(void)
+{
+    siyi_cam_open();
+    siyi_cam_gimbal_centering();
+    siyi_cam_manual_zoom(0x01, 0);
 }
 
 int main(int argc, char const *argv[])
@@ -147,17 +151,19 @@ int main(int argc, char const *argv[])
         exit(1);
     }
 
-    // FIXME:
-    g_serial_path = serial_path;
-    g_serial_config = serial_config;
-    g_net_port = net_port;
+    uart_server_args_t uart_server_args = {
+        .serial_path = serial_path,
+        .serial_config = serial_config,
+        .net_port = net_port,
+    };
 
     if (commander_mode) {
         run_commander(cmd_arg);
     } else {
         load_configs(device_yaml, device);
         load_rc_configs("configs/rc_config.yaml");
-        run_server();
+        device_init();
+        run_server(&uart_server_args);
     }
 
     return 0;
