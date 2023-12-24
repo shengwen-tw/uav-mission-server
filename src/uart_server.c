@@ -642,26 +642,29 @@ void wait_serial_flushing_complete(serial_t sport)
     fcu_read_mavlink_msg(g_cache, rbytes);
 }
 
-char *g_serial_path;
-char *g_serial_config;
-char *g_net_port;
 void *run_uart_server(void *args)
 {
+    /* Load UART server arguments */
+    uart_server_args_t *uart_server_args = (uart_server_args_t *) args;
+    char *serial_path = uart_server_args->serial_path;
+    char *serial_config = uart_server_args->serial_config;
+    char *net_port = uart_server_args->net_port;
+
     int ret_val = EXIT_FAILURE;
 
     unsigned port = DEFAULT_PORT;
     struct SerialConfig cfg;
 
-    const char *parse_err = parse_serial_config(g_serial_config, &cfg);
+    const char *parse_err = parse_serial_config(serial_config, &cfg);
     if (parse_err) {
         help(parse_err);
         exit(ret_val);
     }
 
     /* Parse the TCP port if provided */
-    if (g_net_port) {
-        if ((!get_unsigned(g_net_port, strlen(g_net_port), &port) ||
-             (port == 0) || (port > 0xffff))) {
+    if (net_port) {
+        if ((!get_unsigned(net_port, strlen(net_port), &port) || (port == 0) ||
+             (port > 0xffff))) {
             help("port must be in the range 1-65535");
             exit(ret_val);
         }
@@ -690,7 +693,7 @@ void *run_uart_server(void *args)
     }
 
     pthread_mutex_init(&serial_tx_mtx, NULL);
-    serial = serial_open(g_serial_path, &cfg, SERIAL_TIMEOUT);
+    serial = serial_open(serial_path, &cfg, SERIAL_TIMEOUT);
 
     if (serial == SERIAL_INVALID_FD) {
         error("Failed to open the requested serial port");
@@ -726,8 +729,8 @@ void *run_uart_server(void *args)
     status(
         "Serving %s @ %u bps (parity %s, %d data bits, "
         "and %s stop bits) on port %u",
-        g_serial_path, cfg.baudrate, parity_to_string(cfg.parity),
-        cfg.data_bits, stop_bits_to_string(cfg.stop_bits), port);
+        serial_path, cfg.baudrate, parity_to_string(cfg.parity), cfg.data_bits,
+        stop_bits_to_string(cfg.stop_bits), port);
 
     /* Workaround for RB5's buggy serial port */
     while (!serial_is_ready()) {

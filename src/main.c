@@ -18,11 +18,6 @@
 
 #define CMD_FIFO "/tmp/cmd_fifo"
 
-// FIXME: Pass directly into pthread
-extern char *g_serial_path;
-extern char *g_serial_config;
-extern char *g_net_port;
-
 extern int cmd_fifo_w, cmd_fifo_r;
 
 void run_commander(const char *command)
@@ -44,7 +39,7 @@ void run_commander(const char *command)
     exit(0);
 }
 
-void run_server(void)
+void run_server(uart_server_args_t *uart_server_args)
 {
     /* create pid file */
     int mastr_pid = getpid();
@@ -60,7 +55,8 @@ void run_server(void)
 
     /* start the service */
     pthread_t uart_server_tid;
-    pthread_create(&uart_server_tid, NULL, run_uart_server, NULL);
+    pthread_create(&uart_server_tid, NULL, run_uart_server,
+                   (void *) uart_server_args);
 
     pthread_t mavlink_tx_tid;
     pthread_create(&mavlink_tx_tid, NULL, mavlink_tx_thread, NULL);
@@ -155,12 +151,11 @@ int main(int argc, char const *argv[])
         exit(1);
     }
 
-
-
-    // FIXME:
-    g_serial_path = serial_path;
-    g_serial_config = serial_config;
-    g_net_port = net_port;
+    uart_server_args_t uart_server_args = {
+        .serial_path = serial_path,
+        .serial_config = serial_config,
+        .net_port = net_port,
+    };
 
     if (commander_mode) {
         run_commander(cmd_arg);
@@ -168,7 +163,7 @@ int main(int argc, char const *argv[])
         load_configs(device_yaml, device);
         load_rc_configs("configs/rc_config.yaml");
         device_init();
-        run_server();
+        run_server(&uart_server_args);
     }
 
     return 0;
