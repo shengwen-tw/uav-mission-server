@@ -134,27 +134,26 @@ void mavlink_send_ping(int fd)
     status("RB5: Sent ping message.");
 }
 
-void mavlink_send_ack(int fd,
-                      uint16_t cmd,
+void mavlink_send_ack(uint16_t cmd,
                       uint8_t result,
                       uint8_t progress,
-                      int32_t result_param2)
+                      int32_t result_param2,
+                      uint8_t target_system,
+                      uint8_t target_component)
 {
-    uint8_t sys_id = RB5_ID;
-    uint8_t component_id = MAV_COMP_ID_ONBOARD_COMPUTER;
-    uint8_t target_system = FCU_ID;
-    uint8_t target_component = MAV_COMP_ID_ALL;
+    uint8_t sys_id = FCU_ID;
+    uint8_t component_id = MAV_COMP_ID_CAMERA;
 
     mavlink_message_t msg;
     mavlink_msg_command_ack_pack(sys_id, component_id, &msg, cmd, result,
                                  progress, result_param2, target_system,
                                  target_component);
-    mavlink_send_msg(&msg, fd);
+    mavlink_send_msg(&msg, serial);
 }
 
 void mavlink_send_gimbal_manager_info(int fd)
 {
-    uint8_t sys_id = RB5_ID;
+    uint8_t sys_id = FCU_ID;
     uint8_t component_id = MAV_COMP_ID_ONBOARD_COMPUTER;
 
     uint32_t time_boot_ms = 0;
@@ -174,11 +173,17 @@ void mavlink_send_gimbal_manager_info(int fd)
     mavlink_send_msg(&msg, fd);
 }
 
-void mavlink_send_camera_info(int fd)
+void mavlink_send_camera_info(uint8_t target_system, uint8_t target_component)
 {
-    uint8_t sys_id = RB5_ID;
-    uint8_t component_id = MAV_COMP_ID_CAMERA;
+    status("Reply camera information.");
 
+    /* Send command_ack message */
+    mavlink_send_ack(MAV_CMD_REQUEST_CAMERA_INFORMATION, MAV_RESULT_ACCEPTED, 0,
+                     0, target_system, target_component);
+
+    /* Send camera information message */
+    uint8_t sys_id = FCU_ID;
+    uint8_t component_id = MAV_COMP_ID_CAMERA;
     uint32_t time_boot_ms = 0;
     uint8_t *vendor_name = (uint8_t *) get_camera_vendor_name();
     uint8_t *model_name = (uint8_t *) get_camera_model_name();
@@ -189,9 +194,12 @@ void mavlink_send_camera_info(int fd)
     uint16_t resolution_h = 0;      // pix, 0 if unknown
     uint16_t resolution_v = 0;      // pix, 0 if unknown
     uint8_t lens_id = 0;            // 0 if unknown
-    uint32_t flags = CAMERA_CAP_FLAGS_CAPTURE_IMAGE |
-                     CAMERA_CAP_FLAGS_CAPTURE_VIDEO |
-                     CAMERA_CAP_FLAGS_HAS_MODES;
+    uint32_t flags = CAMERA_CAP_FLAGS_CAPTURE_VIDEO |
+                     CAMERA_CAP_FLAGS_CAPTURE_IMAGE |
+                     CAMERA_CAP_FLAGS_HAS_MODES |
+                     CAMERA_CAP_FLAGS_CAN_CAPTURE_VIDEO_IN_IMAGE_MODE |
+                     CAMERA_CAP_FLAGS_CAN_CAPTURE_IMAGE_IN_VIDEO_MODE |
+                     CAMERA_CAP_FLAGS_HAS_BASIC_ZOOM;
     uint16_t cam_definition_version = 0;
     char *cam_definition_uri = "";
     uint8_t gimbal_device_id = 1;  // Gimbal's ID associates with the camera
@@ -202,26 +210,99 @@ void mavlink_send_camera_info(int fd)
         firmware_version, focal_length, sensor_size_h, sensor_size_v,
         resolution_h, resolution_v, lens_id, flags, cam_definition_version,
         cam_definition_uri, gimbal_device_id);
-    mavlink_send_msg(&msg, fd);
+    mavlink_send_msg(&msg, serial);
 }
 
-static bool camera_request = false;
-
-void mavlink_request_camera_info(void)
+void mavlink_send_camera_settings(uint8_t target_system,
+                                  uint8_t target_component)
 {
-    camera_request = true;
+    status("Reply camera settings.");
+
+    /* Send command_ack message */
+    mavlink_send_ack(MAV_CMD_REQUEST_CAMERA_SETTINGS, MAV_RESULT_ACCEPTED, 0, 0,
+                     target_system, target_component);
+
+    /* Send camera settings message */
+    uint8_t sys_id = FCU_ID;
+    uint8_t component_id = MAV_COMP_ID_CAMERA;
+    uint32_t time_boot_ms = 0;
+    uint8_t mode_id = CAMERA_MODE_IMAGE;
+    float zoom_level = 25.0f;   /* [%] */
+    float focus_level = 100.0f; /* [%] */
+    mavlink_message_t msg;
+    mavlink_msg_camera_settings_pack(sys_id, component_id, &msg, time_boot_ms,
+                                     mode_id, zoom_level, focus_level);
+    mavlink_send_msg(&msg, serial);
 }
 
-void mavlink_camera_microservice_handler(void)
+void mavlink_send_storage_information(uint8_t target_system,
+                                      uint8_t target_component)
 {
-    if (!camera_request)
-        return;
+    status("Reply storage information");
 
-    camera_request = false;
-    mavlink_send_ack(serial, MAV_CMD_REQUEST_CAMERA_INFORMATION,
-                     MAV_RESULT_ACCEPTED, 100, 0);
-    mavlink_send_camera_info(serial);
-    status("Reply camera information.");
+    /* Send command_ack message */
+    mavlink_send_ack(MAV_CMD_REQUEST_STORAGE_INFORMATION, MAV_RESULT_ACCEPTED,
+                     0, 0, target_system, target_component);
+
+    /* Send camera information message */
+    uint8_t sys_id = FCU_ID;
+    uint8_t component_id = MAV_COMP_ID_CAMERA;
+    uint32_t time_boot_ms = 0;
+    uint8_t storage_id = 1;
+    uint8_t storage_count = 1;
+    uint8_t status = STORAGE_STATUS_READY;
+    float total_capacity = 32 * 1024;     /* MiB */
+    float used_capacity = 0;              /* MiB */
+    float available_capacity = 32 * 1024; /* MiB */
+    float read_speed = 1;                 /* MiB/s */
+    float write_speed = 1;                /* MiB/s */
+    uint8_t type = STORAGE_TYPE_MICROSD;
+    uint8_t storage_usage = STORAGE_USAGE_FLAG_SET | STORAGE_USAGE_FLAG_PHOTO |
+                            STORAGE_USAGE_FLAG_VIDEO;
+    mavlink_message_t msg;
+    mavlink_msg_storage_information_pack(
+        sys_id, component_id, &msg, time_boot_ms, storage_id, storage_count,
+        status, total_capacity, used_capacity, available_capacity, read_speed,
+        write_speed, type, "microSD 1", storage_usage);
+    mavlink_send_msg(&msg, serial);
+}
+
+static uint8_t video_status = 0;
+
+void set_video_status(int cam_id)
+{
+    video_status = 1;
+}
+
+void reset_video_status(int cam_id)
+{
+    video_status = 0;
+}
+
+void mavlink_send_camera_capture_status(uint8_t target_system,
+                                        uint8_t target_component)
+{
+    status("Reply camera capture status");
+
+    /* Send command_ack message */
+    mavlink_send_ack(MAV_CMD_REQUEST_CAMERA_CAPTURE_STATUS, MAV_RESULT_ACCEPTED,
+                     0, 0, target_system, target_component);
+
+    /* Send camera capture status message */
+    uint8_t sys_id = FCU_ID;
+    uint8_t component_id = MAV_COMP_ID_CAMERA;
+    uint32_t time_boot_ms = 0;
+    uint8_t image_status = 0;
+    // uint8_t video_status = 0;
+    float image_interval = 0;
+    uint32_t recording_time_ms = 0;
+    float available_capacity = 32 * 1024; /* MiB */
+    int32_t image_count = 0;
+    mavlink_message_t msg;
+    mavlink_msg_camera_capture_status_pack(
+        sys_id, component_id, &msg, time_boot_ms, image_status, video_status,
+        image_interval, recording_time_ms, available_capacity, image_count);
+    mavlink_send_msg(&msg, serial);
 }
 
 #define MSG_SCHEDULER_INIT(freq)          \
@@ -247,11 +328,9 @@ void *mavlink_tx_thread(void *args)
         /* clang-format off */
         MSG_SEND_HZ(1,
             mavlink_send_camera_hearbeart(serial);
+
         );
         /* clang-format on */
-
-        /* Microservices */
-        mavlink_camera_microservice_handler();
 
         /* Limit CPU usage of the thread with execution frequency of 100Hz */
         usleep(10000); /* 10000us = 10ms */
