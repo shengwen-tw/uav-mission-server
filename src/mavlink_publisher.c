@@ -3,8 +3,8 @@
 #include <unistd.h>
 
 #include "config.h"
-#include "fcu.h"
 #include "mavlink.h"
+#include "mavlink_receiver.h"
 #include "serial.h"
 #include "util.h"
 

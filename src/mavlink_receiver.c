@@ -1,11 +1,9 @@
-/* MAVLink parser for flight control unit (FCU) */
-
 #include <stdbool.h>
 
 #include "config.h"
 #include "mavlink.h"
-#include "mavlink_parser.h"
 #include "mavlink_publisher.h"
+#include "mavlink_receiver.h"
 #include "rtsp_stream.h"
 #include "siyi_camera.h"
 #include "util.h"
@@ -194,6 +192,18 @@ static void mav_fcu_autopilot_version(mavlink_message_t *recvd_msg)
     serial_status = true;
 
     status("FCU: received autopilot version message.");
+}
+
+static void parse_mavlink_msg(mavlink_message_t *msg,
+                              struct mavlink_cmd *cmd_list,
+                              size_t msg_cnt)
+{
+    for (int i = 0; i < msg_cnt; i++) {
+        if (msg->msgid == cmd_list[i].msg_id) {
+            cmd_list[i].handler(msg);
+            return;
+        }
+    }
 }
 
 static struct mavlink_cmd fcu_cmds[] = {

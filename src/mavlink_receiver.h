@@ -1,6 +1,7 @@
-#ifndef __MAV_PARSER_H__
-#define __MAV_PARSER_H__
+#ifndef __MAV_RECEIVER_H__
+#define __MAV_RECEIVER_H__
 
+#include <stdbool.h>
 #include <stdint.h>
 #include "mavlink.h"
 
@@ -14,8 +15,7 @@ struct mavlink_cmd {
     void (*handler)(mavlink_message_t *msg);
 };
 
-void parse_mavlink_msg(mavlink_message_t *msg,
-                       struct mavlink_cmd *cmd_list,
-                       size_t msg_cnt);
+void fcu_read_mavlink_msg(uint8_t *buf, size_t nbytes);
+bool serial_is_ready(void);
 
 #endif

@@ -29,10 +29,9 @@
 #include <unistd.h>
 
 #include "config.h"
-#include "fcu.h"
 #include "mavlink.h"
-#include "mavlink_parser.h"
 #include "mavlink_publisher.h"
+#include "mavlink_receiver.h"
 #include "rtsp_stream.h"
 #include "serial.h"
 #include "system.h"

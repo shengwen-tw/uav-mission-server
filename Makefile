@@ -39,8 +39,7 @@ OBJS := \
 	uart_server.o \
 	serial.o \
 	system.o \
-	fcu.o \
-	mavlink_parser.o \
+	mavlink_receiver.o \
 	mavlink_publisher.o \
 	siyi_camera.o \
 	rtsp_stream.o \
