@@ -163,6 +163,7 @@ void rtsp_stream_change_recording_state(int camera_id)
 
         /* Shutdown the entire pipeline */
         gst_element_set_state(data.pipeline, GST_STATE_NULL);
+        gst_element_get_state(data.pipeline, NULL, NULL, GST_CLOCK_TIME_NONE);
 
         /* Assign new file name */
         char timestamp[15] = {0};
@@ -179,6 +180,7 @@ void rtsp_stream_change_recording_state(int camera_id)
 
         /* Restart the pipeline */
         gst_element_set_state(data.pipeline, GST_STATE_PLAYING);
+        gst_element_get_state(data.pipeline, NULL, NULL, GST_CLOCK_TIME_NONE);
     }
 
     data.recording = !data.recording;
@@ -387,6 +389,7 @@ void *rtsp_stream_saver(void *args)
 
     printf("GStreamer: Start playing...\n");
     gst_element_set_state(data.pipeline, GST_STATE_PLAYING);
+    gst_element_get_state(data.pipeline, NULL, NULL, GST_CLOCK_TIME_NONE);
 
     GstBus *bus = gst_element_get_bus(data.pipeline);
     gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE, GST_MESSAGE_ERROR);
