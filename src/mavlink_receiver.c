@@ -160,6 +160,13 @@ static void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
     if (record != record_last) {
         record_last = record;
         rtsp_stream_change_recording_state(0);
+        if (get_video_status(0)) {
+            status("Stop recording video");
+            reset_video_status(0);
+        } else {
+            status("Start recording video");
+            set_video_status(0);
+        }
     }
 
     /* Send camera control signal */
@@ -173,56 +180,59 @@ static void mav_command_long(mavlink_message_t *recvd_msg)
     mavlink_command_long_t mav_cmd_long;
     mavlink_msg_command_long_decode(recvd_msg, &mav_cmd_long);
 
-    status("Received command_long message (command = %d).",
-           mav_cmd_long.command);
-
     switch (mav_cmd_long.command) {
     case MAV_CMD_DO_DIGICAM_CONTROL: /* 203 */
         rtsp_stream_save_image(0);
         break;
     case MAV_CMD_REQUEST_CAMERA_INFORMATION: /* 521 */
-        status("Ground station requesting camera information.");
         mavlink_send_camera_info(recvd_msg->sysid, recvd_msg->compid);
         break;
     case MAV_CMD_REQUEST_CAMERA_SETTINGS: /* 522 */
-        status("Ground station requesting camera settings.");
         mavlink_send_camera_settings(recvd_msg->sysid, recvd_msg->compid);
         break;
     case MAV_CMD_REQUEST_STORAGE_INFORMATION: /* 525 */
-        status("Ground station requesting storage information.");
         mavlink_send_storage_information(recvd_msg->sysid, recvd_msg->compid);
         break;
     case MAV_CMD_REQUEST_CAMERA_CAPTURE_STATUS: /* 527 */
-        status("Ground station requesting camera capture status.");
         mavlink_send_camera_capture_status(recvd_msg->sysid, recvd_msg->compid);
         break;
     case MAV_CMD_SET_CAMERA_MODE: /* 530 */
-        status("Ground station requesting camera mode setting.");
         mavlink_send_ack(MAV_CMD_SET_CAMERA_MODE, MAV_RESULT_ACCEPTED, 0, 0,
                          recvd_msg->sysid, recvd_msg->compid);
         mavlink_send_camera_capture_status(recvd_msg->sysid, recvd_msg->compid);
         break;
     case MAV_CMD_IMAGE_START_CAPTURE: /* 2000 */
-        status("Start capturing image");
+        rtsp_stream_save_image(0);
         mavlink_send_ack(MAV_CMD_IMAGE_START_CAPTURE, MAV_RESULT_ACCEPTED, 0, 0,
                          recvd_msg->sysid, recvd_msg->compid);
         break;
     case MAV_CMD_IMAGE_STOP_CAPTURE: /* 2001 */
-        status("Stop capturing image");
         mavlink_send_ack(MAV_CMD_IMAGE_STOP_CAPTURE, MAV_RESULT_ACCEPTED, 0, 0,
                          recvd_msg->sysid, recvd_msg->compid);
         break;
     case MAV_CMD_VIDEO_START_CAPTURE: /* 2500 */
-        status("Start recording video");
-        set_video_status(0);
         mavlink_send_ack(MAV_CMD_VIDEO_START_CAPTURE, MAV_RESULT_ACCEPTED, 0, 0,
                          recvd_msg->sysid, recvd_msg->compid);
+        /* Start recording */
+        if (!get_video_status(0)) {
+            status("Start recording video");
+            rtsp_stream_change_recording_state(0);
+        }
+        set_video_status(0);
         break;
     case MAV_CMD_VIDEO_STOP_CAPTURE: /* 2501 */
-        status("Stop recording video");
-        reset_video_status(0);
         mavlink_send_ack(MAV_CMD_VIDEO_STOP_CAPTURE, MAV_RESULT_ACCEPTED, 0, 0,
                          recvd_msg->sysid, recvd_msg->compid);
+        /* Stop recording */
+        if (get_video_status(0)) {
+            status("Stop recording video");
+            rtsp_stream_change_recording_state(0);
+        }
+        reset_video_status(0);
+        break;
+    default:
+        status("Received undefined command_long message #%d.",
+               mav_cmd_long.command);
         break;
     }
 }

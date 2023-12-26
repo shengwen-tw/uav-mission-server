@@ -7,6 +7,7 @@ void *mavlink_tx_thread(void *args);
 
 void set_video_status(int cam_id);
 void reset_video_status(int cam_id);
+bool get_video_status(int cam_id);
 
 void mavlink_send_play_tune(int tune_num, int fd);
 void mavlink_send_request_autopilot_capabilities(int fd);

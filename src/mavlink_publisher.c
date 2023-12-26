@@ -175,8 +175,6 @@ void mavlink_send_gimbal_manager_info(int fd)
 
 void mavlink_send_camera_info(uint8_t target_system, uint8_t target_component)
 {
-    status("Reply camera information.");
-
     /* Send command_ack message */
     mavlink_send_ack(MAV_CMD_REQUEST_CAMERA_INFORMATION, MAV_RESULT_ACCEPTED, 0,
                      0, target_system, target_component);
@@ -216,8 +214,6 @@ void mavlink_send_camera_info(uint8_t target_system, uint8_t target_component)
 void mavlink_send_camera_settings(uint8_t target_system,
                                   uint8_t target_component)
 {
-    status("Reply camera settings.");
-
     /* Send command_ack message */
     mavlink_send_ack(MAV_CMD_REQUEST_CAMERA_SETTINGS, MAV_RESULT_ACCEPTED, 0, 0,
                      target_system, target_component);
@@ -238,13 +234,14 @@ void mavlink_send_camera_settings(uint8_t target_system,
 void mavlink_send_storage_information(uint8_t target_system,
                                       uint8_t target_component)
 {
-    status("Reply storage information");
-
     /* Send command_ack message */
     mavlink_send_ack(MAV_CMD_REQUEST_STORAGE_INFORMATION, MAV_RESULT_ACCEPTED,
                      0, 0, target_system, target_component);
 
-    /* Send camera information message */
+    /* Return as the message is not mandatory */
+    return;
+
+    /* Send storage information message */
     uint8_t sys_id = FCU_ID;
     uint8_t component_id = MAV_COMP_ID_CAMERA;
     uint32_t time_boot_ms = 0;
@@ -267,23 +264,26 @@ void mavlink_send_storage_information(uint8_t target_system,
     mavlink_send_msg(&msg, serial);
 }
 
-static uint8_t video_status = 0;
+static bool video_status = false;
 
 void set_video_status(int cam_id)
 {
-    video_status = 1;
+    video_status = true;
 }
 
 void reset_video_status(int cam_id)
 {
-    video_status = 0;
+    video_status = false;
+}
+
+bool get_video_status(int cam_id)
+{
+    return video_status;
 }
 
 void mavlink_send_camera_capture_status(uint8_t target_system,
                                         uint8_t target_component)
 {
-    status("Reply camera capture status");
-
     /* Send command_ack message */
     mavlink_send_ack(MAV_CMD_REQUEST_CAMERA_CAPTURE_STATUS, MAV_RESULT_ACCEPTED,
                      0, 0, target_system, target_component);
