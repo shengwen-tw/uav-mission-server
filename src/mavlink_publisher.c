@@ -8,10 +8,7 @@
 #include "serial.h"
 #include "util.h"
 
-enum {
-    FCU_ID = 1,
-    RB5_ID,
-};
+#define RB5_ID 2  // TODO: Define in YAML instead
 
 extern serial_t serial;
 extern pthread_mutex_t serial_tx_mtx;
@@ -59,7 +56,7 @@ static void mavlink_send_msg(const mavlink_message_t *msg, int fd)
 
 static void mavlink_send_camera_hearbeart(int fd)
 {
-    uint8_t sys_id = FCU_ID;
+    uint8_t sys_id = get_fcu_sysid();
     uint8_t component_id = MAV_COMP_ID_CAMERA;
     uint8_t type = MAV_TYPE_CAMERA;
     uint8_t autopilot = MAV_AUTOPILOT_INVALID;
@@ -80,7 +77,7 @@ void mavlink_send_play_tune(int tune_num, int fd)
 
     uint8_t sys_id = RB5_ID;
     uint8_t component_id = MAV_COMP_ID_ONBOARD_COMPUTER;
-    uint8_t target_system = FCU_ID;
+    uint8_t target_system = get_fcu_sysid();
     uint8_t target_component = MAV_COMP_ID_ALL;
     const char *tune2 = "";  // extension of the first tune argument
 
@@ -96,7 +93,7 @@ void mavlink_send_request_autopilot_capabilities(int fd)
 {
     uint8_t sys_id = RB5_ID;
     uint8_t component_id = MAV_COMP_ID_ONBOARD_COMPUTER;
-    uint8_t target_system = FCU_ID;
+    uint8_t target_system = get_fcu_sysid();
     uint8_t target_component = MAV_COMP_ID_ALL;
     uint16_t command = MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES;
     uint8_t confirmation = 0;
@@ -117,7 +114,7 @@ void mavlink_send_request_autopilot_capabilities(int fd)
     mavlink_send_msg(&msg, fd);
 
     if (serial_workaround_verbose)
-        status("RB5: Sent request_autopilot_capabilities message.");
+        status("Requesting autopilot capabilities...");
 }
 
 void mavlink_send_ping(int fd)
@@ -141,7 +138,7 @@ void mavlink_send_ack(uint16_t cmd,
                       uint8_t target_system,
                       uint8_t target_component)
 {
-    uint8_t sys_id = FCU_ID;
+    uint8_t sys_id = get_fcu_sysid();
     uint8_t component_id = MAV_COMP_ID_CAMERA;
 
     mavlink_message_t msg;
@@ -153,7 +150,7 @@ void mavlink_send_ack(uint16_t cmd,
 
 void mavlink_send_gimbal_manager_info(int fd)
 {
-    uint8_t sys_id = FCU_ID;
+    uint8_t sys_id = get_fcu_sysid();
     uint8_t component_id = MAV_COMP_ID_ONBOARD_COMPUTER;
 
     uint32_t time_boot_ms = 0;
@@ -180,7 +177,7 @@ void mavlink_send_camera_info(uint8_t target_system, uint8_t target_component)
                      0, target_system, target_component);
 
     /* Send camera information message */
-    uint8_t sys_id = FCU_ID;
+    uint8_t sys_id = get_fcu_sysid();
     uint8_t component_id = MAV_COMP_ID_CAMERA;
     uint32_t time_boot_ms = 0;
     uint8_t *vendor_name = (uint8_t *) get_camera_vendor_name();
@@ -219,7 +216,7 @@ void mavlink_send_camera_settings(uint8_t target_system,
                      target_system, target_component);
 
     /* Send camera settings message */
-    uint8_t sys_id = FCU_ID;
+    uint8_t sys_id = get_fcu_sysid();
     uint8_t component_id = MAV_COMP_ID_CAMERA;
     uint32_t time_boot_ms = 0;
     uint8_t mode_id = CAMERA_MODE_IMAGE;
@@ -242,7 +239,7 @@ void mavlink_send_storage_information(uint8_t target_system,
     return;
 
     /* Send storage information message */
-    uint8_t sys_id = FCU_ID;
+    uint8_t sys_id = get_fcu_sysid();
     uint8_t component_id = MAV_COMP_ID_CAMERA;
     uint32_t time_boot_ms = 0;
     uint8_t storage_id = 1;
@@ -289,7 +286,7 @@ void mavlink_send_camera_capture_status(uint8_t target_system,
                      0, 0, target_system, target_component);
 
     /* Send camera capture status message */
-    uint8_t sys_id = FCU_ID;
+    uint8_t sys_id = get_fcu_sysid();
     uint8_t component_id = MAV_COMP_ID_CAMERA;
     uint32_t time_boot_ms = 0;
     uint8_t image_status = 0;
@@ -319,7 +316,7 @@ void mavlink_send_camera_capture_status(uint8_t target_system,
 
 void *mavlink_tx_thread(void *args)
 {
-    while (!serial_is_ready())
+    while (!flight_controller_connected())
         sleep(1);
 
     MSG_SCHEDULER_INIT(1); /* 1Hz */

@@ -530,7 +530,7 @@ static void send_data_to_clients(serial_t sport)
     if (rbytes <= 0)
         return;
 
-    fcu_read_mavlink_msg(g_cache, rbytes);
+    read_mavlink_msg(g_cache, rbytes);
 
     while (current) {
         size_t sent = 0;
@@ -638,7 +638,7 @@ void wait_serial_flushing_complete(serial_t sport)
     long rbytes = serial_read(sport, g_cache, sizeof(g_cache));
     if (rbytes <= 0)
         return;
-    fcu_read_mavlink_msg(g_cache, rbytes);
+    read_mavlink_msg(g_cache, rbytes);
 }
 
 void *run_uart_server(void *args)
@@ -731,16 +731,12 @@ void *run_uart_server(void *args)
         serial_path, cfg.baudrate, parity_to_string(cfg.parity), cfg.data_bits,
         stop_bits_to_string(cfg.stop_bits), port);
 
-    /* Workaround for RB5's buggy serial port */
-    while (!serial_is_ready()) {
+    /* Wait until the connection is established with the flight controller */
+    while (!flight_controller_connected()) {
         flush_serial_until_ready(serial);
         usleep(500000);  // 500ms
         wait_serial_flushing_complete(serial);
     }
-
-    status("RB5's serial port flushing complete.");
-
-    mavlink_send_ping(serial);
 
     /* Main server loop */
     for (;;) {

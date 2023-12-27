@@ -15,7 +15,8 @@ struct mavlink_cmd {
     void (*handler)(mavlink_message_t *msg);
 };
 
-void fcu_read_mavlink_msg(uint8_t *buf, size_t nbytes);
-bool serial_is_ready(void);
+void read_mavlink_msg(uint8_t *buf, size_t nbytes);
+bool flight_controller_connected(void);
+uint8_t get_fcu_sysid(void);
 
 #endif

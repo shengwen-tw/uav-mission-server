@@ -11,11 +11,12 @@
 #define FCU_CHANNEL MAVLINK_COMM_1
 
 extern bool serial_workaround_verbose;
-static bool serial_status = false;
+static bool serial_is_ready = false;
+static uint8_t fcu_sysid = 0;
 
 static void mav_fcu_ping(mavlink_message_t *recvd_msg)
 {
-    status("FCU: Received ping message.");
+    status("Received ping message.");
 }
 
 static void mav_fcu_gps_raw_int(mavlink_message_t *recvd_msg)
@@ -239,9 +240,15 @@ static void mav_command_long(mavlink_message_t *recvd_msg)
 
 static void mav_fcu_autopilot_version(mavlink_message_t *recvd_msg)
 {
-    serial_status = true;
+    serial_is_ready = true;
+    fcu_sysid = recvd_msg->sysid;
+    status("Established connection with flight controller (sys_id=%d)",
+           fcu_sysid);
+}
 
-    status("FCU: received autopilot version message.");
+uint8_t get_fcu_sysid(void)
+{
+    return fcu_sysid;
 }
 
 static void parse_mavlink_msg(mavlink_message_t *msg,
@@ -267,9 +274,9 @@ static struct mavlink_cmd fcu_cmds[] = {
 static mavlink_status_t fcu_status;
 static mavlink_message_t fcu_msg;
 
-static bool fcu_verbose = false;
+static bool mavlink_rx_verbose = false;
 
-void fcu_read_mavlink_msg(uint8_t *buf, size_t nbytes)
+void read_mavlink_msg(uint8_t *buf, size_t nbytes)
 {
     const size_t msg_cnt = sizeof(fcu_cmds) / sizeof(struct mavlink_cmd);
     for (int i = 0; i < nbytes; i++) {
@@ -279,11 +286,11 @@ void fcu_read_mavlink_msg(uint8_t *buf, size_t nbytes)
         }
     }
 
-    if (fcu_verbose)
-        status("FCU: Received undefined message #%d", fcu_msg.msgid);
+    if (mavlink_rx_verbose)
+        status("Received undefined message #%d", fcu_msg.msgid);
 }
 
-bool serial_is_ready(void)
+bool flight_controller_connected(void)
 {
-    return serial_status;
+    return serial_is_ready;
 }
