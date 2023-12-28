@@ -626,21 +626,6 @@ void read_user_cmd(serial_t sport)
     }
 }
 
-void flush_serial_until_ready(serial_t sport)
-{
-    /* Send message to test if serial is ready to work */
-    mavlink_send_request_autopilot_capabilities(sport);
-}
-
-void wait_serial_flushing_complete(serial_t sport)
-{
-    /* Wait for FCU's reply */
-    long rbytes = serial_read(sport, g_cache, sizeof(g_cache));
-    if (rbytes <= 0)
-        return;
-    read_mavlink_msg(g_cache, rbytes);
-}
-
 void *run_uart_server(void *args)
 {
     /* Load UART server arguments */
@@ -731,11 +716,20 @@ void *run_uart_server(void *args)
         serial_path, cfg.baudrate, parity_to_string(cfg.parity), cfg.data_bits,
         stop_bits_to_string(cfg.stop_bits), port);
 
-    /* Wait until the connection is established with the flight controller */
+    /* Wait until the connection is established to the flight controller */
     while (!flight_controller_connected()) {
-        flush_serial_until_ready(serial);
-        usleep(500000);  // 500ms
-        wait_serial_flushing_complete(serial);
+        /* Send autopilot capabilities message */
+        mavlink_send_request_autopilot_capabilities(serial);
+
+        /* Wait for a while */
+        usleep(500000); /* 500ms */
+
+        /* Attempt to receive autopilot version message from the flight
+         * controller */
+        long rbytes = serial_read(serial, g_cache, sizeof(g_cache));
+        if (rbytes <= 0)
+            continue;
+        read_mavlink_msg(g_cache, rbytes);
     }
 
     /* Main server loop */
