@@ -1,6 +1,7 @@
 #include <glib.h>
 #include <gst/gst.h>
 #include <limits.h>
+#include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <time.h>
@@ -12,6 +13,8 @@ typedef struct {
     bool recording;
     bool busy;
     bool snapshot_request;
+    bool camera_ready;
+    pthread_mutex_t snapshot_mtx;
     char mp4_file_name[PATH_MAX];
 
     /* Video and image saving pipeline */
@@ -141,11 +144,19 @@ static void on_new_sample_handler(GstElement *sink, gst_data_t *data)
 
 void rtsp_stream_save_image(int camera_id)
 {
+    if (!data.camera_ready)
+        return;
+
+    pthread_mutex_lock(&data.snapshot_mtx);
     data.snapshot_request = true;
+    pthread_mutex_unlock(&data.snapshot_mtx);
 }
 
 void rtsp_stream_change_recording_state(int camera_id)
 {
+    if (!data.camera_ready)
+        return;
+
     if (data.busy) {
         printf("[Camera %d] Error, please wait until the video is saved.\n",
                camera_id);
@@ -221,6 +232,8 @@ void *rtsp_stream_saver(void *args)
     int image_width = 0, image_height = 0;
     get_config_param("image_width", &image_width);
     get_config_param("image_height", &image_height);
+
+    pthread_mutex_init(&data.snapshot_mtx, NULL);
 
     gst_init(NULL, NULL);
 
@@ -390,6 +403,8 @@ void *rtsp_stream_saver(void *args)
     printf("GStreamer: Start playing...\n");
     gst_element_set_state(data.pipeline, GST_STATE_PLAYING);
     gst_element_get_state(data.pipeline, NULL, NULL, GST_CLOCK_TIME_NONE);
+
+    data.camera_ready = true;
 
     GstBus *bus = gst_element_get_bus(data.pipeline);
     gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE, GST_MESSAGE_ERROR);
