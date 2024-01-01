@@ -183,7 +183,7 @@ static void mav_command_long(mavlink_message_t *recvd_msg)
 
     switch (mav_cmd_long.command) {
     case MAV_CMD_DO_DIGICAM_CONTROL: /* 203 */
-        rtsp_stream_save_image(0);
+        // rtsp_stream_save_image(0);
         break;
     case MAV_CMD_REQUEST_CAMERA_INFORMATION: /* 521 */
         mavlink_send_camera_info(recvd_msg->sysid, recvd_msg->compid);
