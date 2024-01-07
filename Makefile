@@ -41,6 +41,7 @@ OBJS := \
 	system.o \
 	mavlink_receiver.o \
 	mavlink_publisher.o \
+	device.o \
 	siyi_camera.o \
 	rtsp_stream.o \
 	config.o \

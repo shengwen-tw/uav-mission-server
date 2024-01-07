@@ -1,6 +1,7 @@
 #include <stdbool.h>
 
 #include "config.h"
+#include "device.h"
 #include "mavlink.h"
 #include "mavlink_publisher.h"
 #include "mavlink_receiver.h"
@@ -154,7 +155,7 @@ static void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
 
         printf("Zoom ratio: %d.%d\n", zoom_ratio / 10, zoom_ratio % 10);
 
-        siyi_cam_manual_zoom(zoom_ratio / 10, zoom_ratio % 10);
+        camera_zoom(0, zoom_ratio / 10, zoom_ratio % 10);
     }
 
     /* Handle video recording button */
@@ -171,8 +172,7 @@ static void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
     }
 
     /* Send camera control signal */
-    siyi_cam_gimbal_rotate((int16_t) (cam_yaw * 10),
-                           (int16_t) (cam_pitch * 10));
+    gimbal_rotate(0, (int16_t) (cam_yaw * 10), (int16_t) (cam_pitch * 10));
 }
 
 static void mav_command_long(mavlink_message_t *recvd_msg)

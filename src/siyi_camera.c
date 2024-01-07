@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include "config.h"
+#include "device.h"
 #include "siyi_camera.h"
 
 #define SIYI_HEADER_SZ 8
@@ -94,7 +95,9 @@ static uint8_t *siyi_cam_pack_common(uint8_t *buf,
     return &buf[8];
 }
 
-void siyi_cam_manual_zoom(uint8_t zoom_integer, uint8_t zoom_decimal)
+void siyi_cam_manual_zoom(struct camera_dev *cam,
+                          uint8_t zoom_integer,
+                          uint8_t zoom_decimal)
 {
     uint8_t buf[SIYI_ZOOM_MSG_LEN] = {0};
     uint8_t *payload = siyi_cam_pack_common(buf, false, 2, 0, 0x0f);
@@ -113,7 +116,9 @@ void siyi_cam_manual_zoom(uint8_t zoom_integer, uint8_t zoom_decimal)
     send(siyi_cam_fd, buf, sizeof(buf), 0);
 }
 
-void siyi_cam_gimbal_rotate_speed(int8_t yaw, int8_t pitch)
+void siyi_cam_gimbal_rotate_speed(struct camera_dev *cam,
+                                  int8_t yaw,
+                                  int8_t pitch)
 {
     uint8_t buf[SIYI_GIMBAL_ROTATE_SPEED_MSG_LEN] = {0};
     uint8_t *payload = siyi_cam_pack_common(buf, false, 2, 0, 0x07);
@@ -132,7 +137,7 @@ void siyi_cam_gimbal_rotate_speed(int8_t yaw, int8_t pitch)
     send(siyi_cam_fd, buf, sizeof(buf), 0);
 }
 
-void siyi_cam_gimbal_rotate(int16_t yaw, int16_t pitch)
+void siyi_cam_gimbal_rotate(struct camera_dev *cam, int16_t yaw, int16_t pitch)
 {
     uint8_t buf[SIYI_GIMBAL_ROTATE_MSG_LEN] = {0};
     uint8_t *payload = siyi_cam_pack_common(buf, false, 4, 0, 0x0e);
@@ -151,7 +156,7 @@ void siyi_cam_gimbal_rotate(int16_t yaw, int16_t pitch)
     send(siyi_cam_fd, buf, sizeof(buf), 0);
 }
 
-void siyi_cam_gimbal_centering(void)
+void siyi_cam_gimbal_centering(struct camera_dev *cam)
 {
     uint8_t buf[SIYI_GIMBAL_NEUTRAL_MSG_LEN] = {0};
     uint8_t *payload = siyi_cam_pack_common(buf, false, 1, 0, 0x08);
@@ -167,7 +172,7 @@ void siyi_cam_gimbal_centering(void)
     send(siyi_cam_fd, buf, sizeof(buf), 0);
 }
 
-void siyi_cam_open(void)
+void siyi_cam_open(struct camera_dev *cam)
 {
     char *ip = "";
     get_config_param("siyi_camera_ip", &ip);
@@ -194,4 +199,19 @@ void siyi_cam_open(void)
     }
 
     printf("SIYI camera connected.\n");
+}
+
+static struct camera_operations siyi_cam_ops = {
+    .camera_open = NULL,
+    .camera_close = NULL,
+    .camera_zoom = siyi_cam_manual_zoom,
+    .gimbal_open = siyi_cam_open,
+    .gimbal_close = NULL,
+    .gimbal_centering = siyi_cam_gimbal_centering,
+    .gimbal_rotate = siyi_cam_gimbal_rotate,
+};
+
+void register_siyi_camera(void)
+{
+    register_camera(&siyi_cam_ops);
 }

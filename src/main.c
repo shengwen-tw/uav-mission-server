@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "config.h"
+#include "device.h"
 #include "mavlink.h"
 #include "mavlink_publisher.h"
 #include "rtsp_stream.h"
@@ -71,9 +72,11 @@ void run_server(uart_server_args_t *uart_server_args)
 
 static void device_init(void)
 {
-    siyi_cam_open();
-    siyi_cam_gimbal_centering();
-    siyi_cam_manual_zoom(0x01, 0);
+    register_siyi_camera();
+
+    gimbal_open(0);
+    camera_zoom(0, 1, 0);
+    gimbal_centering(0);
 }
 
 int main(int argc, char const *argv[])
