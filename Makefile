@@ -45,6 +45,7 @@ OBJS := \
 	siyi_camera.o \
 	rtsp_stream.o \
 	config.o \
+        crc16.o \
 	main.o
 
 OBJS := $(addprefix $(OUT)/, $(OBJS))

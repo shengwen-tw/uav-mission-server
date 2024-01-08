@@ -21,6 +21,8 @@ static inline double get_time_sec(void)
     return (double) tv.tv_sec + (double) tv.tv_usec * 1e-6;
 }
 
+uint16_t crc16_calculate(uint8_t *ptr, uint32_t len);
+
 void status(const char *fmt, ...);
 
 #endif
