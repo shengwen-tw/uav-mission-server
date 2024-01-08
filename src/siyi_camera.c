@@ -14,13 +14,14 @@
 
 #define SIYI_CAM(cam) ((struct siyi_cam_dev *) (cam)->gimbal_priv)
 
-#define SIYI_HEADER_SZ 8
-#define SIYI_CRC_SZ 2
+#define SIYI_HEADER_LEN 8
+#define SIYI_CRC_LEN 2
+#define SIYI_MSG_OVERHEAD (SIYI_HEADER_LEN + SIYI_CRC_LEN)
 
-#define SIYI_ZOOM_MSG_LEN (SIYI_HEADER_SZ + SIYI_CRC_SZ + 2)
-#define SIYI_GIMBAL_ROTATE_SPEED_MSG_LEN (SIYI_HEADER_SZ + SIYI_CRC_SZ + 2)
-#define SIYI_GIMBAL_ROTATE_MSG_LEN (SIYI_HEADER_SZ + SIYI_CRC_SZ + 4)
-#define SIYI_GIMBAL_NEUTRAL_MSG_LEN (SIYI_HEADER_SZ + SIYI_CRC_SZ + 1)
+#define CAMERA_ZOOM_MSG_LEN (SIYI_MSG_OVERHEAD + 2)
+#define GIMBAL_ROTATE_SPEED_MSG_LEN (SIYI_MSG_OVERHEAD + 2)
+#define GIMBAL_ROTATE_MSG_LEN (SIYI_MSG_OVERHEAD + 4)
+#define GIMBAL_CENTERING_MSG_LEN (SIYI_MSG_OVERHEAD + 1)
 
 struct siyi_cam_dev {
     int fd;
@@ -59,7 +60,7 @@ static void siyi_cam_manual_zoom(struct camera_dev *cam,
                                  uint8_t zoom_integer,
                                  uint8_t zoom_decimal)
 {
-    uint8_t buf[SIYI_ZOOM_MSG_LEN] = {0};
+    uint8_t buf[CAMERA_ZOOM_MSG_LEN] = {0};
     uint8_t *payload = siyi_cam_pack_common(buf, false, 2, 0, 0x0f);
 
     /* Set integer part of the camera zoom ratio */
@@ -69,7 +70,7 @@ static void siyi_cam_manual_zoom(struct camera_dev *cam,
     payload[1] = zoom_decimal;
 
     /* CRC */
-    uint16_t crc16 = crc16_calculate(buf, SIYI_ZOOM_MSG_LEN - 2);
+    uint16_t crc16 = crc16_calculate(buf, CAMERA_ZOOM_MSG_LEN - 2);
     memcpy(&payload[2], &crc16, sizeof(crc16));
 
     /* Send out the message */
@@ -79,7 +80,7 @@ static void siyi_cam_manual_zoom(struct camera_dev *cam,
 __attribute__((unused)) static void
 siyi_cam_gimbal_rotate_speed(struct camera_dev *cam, int8_t yaw, int8_t pitch)
 {
-    uint8_t buf[SIYI_GIMBAL_ROTATE_SPEED_MSG_LEN] = {0};
+    uint8_t buf[GIMBAL_ROTATE_SPEED_MSG_LEN] = {0};
     uint8_t *payload = siyi_cam_pack_common(buf, false, 2, 0, 0x07);
 
     /* Yaw */
@@ -89,7 +90,7 @@ siyi_cam_gimbal_rotate_speed(struct camera_dev *cam, int8_t yaw, int8_t pitch)
     payload[1] = pitch;
 
     /* CRC */
-    uint16_t crc16 = crc16_calculate(buf, SIYI_GIMBAL_ROTATE_SPEED_MSG_LEN - 2);
+    uint16_t crc16 = crc16_calculate(buf, GIMBAL_ROTATE_SPEED_MSG_LEN - 2);
     memcpy(&payload[2], &crc16, sizeof(crc16));
 
     /* Send out the message */
@@ -100,7 +101,7 @@ static void siyi_cam_gimbal_rotate(struct camera_dev *cam,
                                    int16_t yaw,
                                    int16_t pitch)
 {
-    uint8_t buf[SIYI_GIMBAL_ROTATE_MSG_LEN] = {0};
+    uint8_t buf[GIMBAL_ROTATE_MSG_LEN] = {0};
     uint8_t *payload = siyi_cam_pack_common(buf, false, 4, 0, 0x0e);
 
     /* Yaw */
@@ -110,7 +111,7 @@ static void siyi_cam_gimbal_rotate(struct camera_dev *cam,
     memcpy(&payload[2], &pitch, sizeof(pitch));
 
     /* CRC */
-    uint16_t crc16 = crc16_calculate(buf, SIYI_GIMBAL_ROTATE_MSG_LEN - 2);
+    uint16_t crc16 = crc16_calculate(buf, GIMBAL_ROTATE_MSG_LEN - 2);
     memcpy(&payload[4], &crc16, sizeof(crc16));
 
     /* Send out the message */
@@ -119,14 +120,14 @@ static void siyi_cam_gimbal_rotate(struct camera_dev *cam,
 
 static void siyi_cam_gimbal_centering(struct camera_dev *cam)
 {
-    uint8_t buf[SIYI_GIMBAL_NEUTRAL_MSG_LEN] = {0};
+    uint8_t buf[GIMBAL_CENTERING_MSG_LEN] = {0};
     uint8_t *payload = siyi_cam_pack_common(buf, false, 1, 0, 0x08);
 
     /* Center position */
     payload[0] = 1; /* Set to 1 by the manual */
 
     /* CRC */
-    uint16_t crc16 = crc16_calculate(buf, SIYI_GIMBAL_NEUTRAL_MSG_LEN - 2);
+    uint16_t crc16 = crc16_calculate(buf, GIMBAL_CENTERING_MSG_LEN - 2);
     memcpy(&payload[1], &crc16, sizeof(crc16));
 
     /* Send out the message */
