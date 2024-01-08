@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "device.h"
+#include "rtsp_stream.h"
 #include "siyi_camera.h"
 #include "util.h"
 
@@ -137,6 +138,10 @@ static void siyi_cam_gimbal_centering(struct camera_dev *cam)
 static void siyi_cam_open(struct camera_dev *cam)
 {
     cam->gimbal_priv = malloc(sizeof(struct siyi_cam_dev));
+    if (!cam->gimbal_priv) {
+        status("%s(): Failed to allocate memory with malloc.", __func__);
+        exit(1);
+    }
 
     char *ip = "";
     get_config_param("siyi_camera_ip", &ip);
@@ -174,6 +179,8 @@ static void siyi_cam_close(struct camera_dev *cam)
 static struct camera_operations siyi_cam_ops = {
     .camera_open = NULL,
     .camera_close = NULL,
+    .camera_save_image = rtsp_stream_save_image,
+    .camera_change_record_state = rtsp_stream_change_record_state,
     .camera_zoom = siyi_cam_manual_zoom,
     .gimbal_open = siyi_cam_open,
     .gimbal_close = siyi_cam_close,

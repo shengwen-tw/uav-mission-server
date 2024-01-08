@@ -7,6 +7,7 @@
 #include <time.h>
 
 #include "config.h"
+#include "device.h"
 
 typedef struct {
     int camera_id;
@@ -142,7 +143,7 @@ static void on_new_sample_handler(GstElement *sink, gst_data_t *data)
     }
 }
 
-void rtsp_stream_save_image(int camera_id)
+void rtsp_stream_save_image(struct camera_dev *cam)
 {
     if (!data.camera_ready)
         return;
@@ -152,25 +153,25 @@ void rtsp_stream_save_image(int camera_id)
     pthread_mutex_unlock(&data.snapshot_mtx);
 }
 
-void rtsp_stream_change_recording_state(int camera_id)
+void rtsp_stream_change_record_state(struct camera_dev *cam)
 {
     if (!data.camera_ready)
         return;
 
     if (data.busy) {
         printf("[Camera %d] Error, please wait until the video is saved.\n",
-               camera_id);
+               cam->id);
         return;
     }
 
     if (data.recording) {
-        printf("[Camera %d] Stop recording...\n", camera_id);
+        printf("[Camera %d] Stop recording...\n", cam->id);
 
         /* Send end-of-stream (EOS) request */
         data.busy = true;
         gst_element_send_event(data.mp4_encoder, gst_event_new_eos());
     } else {
-        printf("[Camera %d] Start recording...\n", camera_id);
+        printf("[Camera %d] Start recording...\n", cam->id);
 
         /* Shutdown the entire pipeline */
         gst_element_set_state(data.pipeline, GST_STATE_NULL);

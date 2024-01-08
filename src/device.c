@@ -1,4 +1,7 @@
+#include <stdlib.h>
+
 #include "device.h"
+#include "util.h"
 
 #define CAMERA_NUM_MAX 6
 
@@ -9,6 +12,12 @@ static int camera_cnt;
 
 int register_camera(struct camera_operations *camera_ops)
 {
+    if (camera_cnt >= CAMERA_NUM_MAX) {
+        status("Excedded maximal number of cameras");
+        exit(1);
+    }
+
+    camera_devs[camera_cnt].id = camera_cnt;
     camera_devs[camera_cnt].camera_ops = camera_ops;
     camera_cnt++;
 
@@ -29,6 +38,22 @@ void camera_close(int id)
         return;
 
     CAMERA_OPS(id)->camera_close(&camera_devs[id]);
+}
+
+void camera_save_image(int id)
+{
+    if (!CAMERA_OPS(id)->camera_save_image)
+        return;
+
+    CAMERA_OPS(id)->camera_save_image(&camera_devs[id]);
+}
+
+void camera_change_record_state(int id)
+{
+    if (!CAMERA_OPS(id)->camera_change_record_state)
+        return;
+
+    CAMERA_OPS(id)->camera_change_record_state(&camera_devs[id]);
 }
 
 void camera_zoom(int id, uint8_t zoom_integer, uint8_t zoom_decimal)

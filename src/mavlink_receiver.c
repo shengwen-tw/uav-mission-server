@@ -133,7 +133,7 @@ static void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
 
     if (button_snapshot != button_snapshot_last) {
         button_snapshot_last = button_snapshot;
-        rtsp_stream_save_image(0);
+        camera_save_image(0);
     }
 
     /* Handle zoom button */
@@ -161,7 +161,7 @@ static void mav_fcu_rc_channels(mavlink_message_t *recvd_msg)
     /* Handle video recording button */
     if (record != record_last) {
         record_last = record;
-        rtsp_stream_change_recording_state(0);
+        camera_change_record_state(0);
         if (get_video_status(0)) {
             status("Stop recording video");
             reset_video_status(0);
@@ -183,7 +183,7 @@ static void mav_command_long(mavlink_message_t *recvd_msg)
 
     switch (mav_cmd_long.command) {
     case MAV_CMD_DO_DIGICAM_CONTROL: /* 203 */
-        // rtsp_stream_save_image(0);
+        // camera_save_image(0);
         break;
     case MAV_CMD_REQUEST_CAMERA_INFORMATION: /* 521 */
         mavlink_send_camera_info(recvd_msg->sysid, recvd_msg->compid);
@@ -203,7 +203,7 @@ static void mav_command_long(mavlink_message_t *recvd_msg)
         mavlink_send_camera_capture_status(recvd_msg->sysid, recvd_msg->compid);
         break;
     case MAV_CMD_IMAGE_START_CAPTURE: /* 2000 */
-        rtsp_stream_save_image(0);
+        camera_save_image(0);
         mavlink_send_ack(MAV_CMD_IMAGE_START_CAPTURE, MAV_RESULT_ACCEPTED, 0, 0,
                          recvd_msg->sysid, recvd_msg->compid);
         break;
@@ -217,7 +217,7 @@ static void mav_command_long(mavlink_message_t *recvd_msg)
         /* Start recording */
         if (!get_video_status(0)) {
             status("Start recording video");
-            rtsp_stream_change_recording_state(0);
+            camera_change_record_state(0);
         }
         set_video_status(0);
         break;
@@ -227,7 +227,7 @@ static void mav_command_long(mavlink_message_t *recvd_msg)
         /* Stop recording */
         if (get_video_status(0)) {
             status("Stop recording video");
-            rtsp_stream_change_recording_state(0);
+            camera_change_record_state(0);
         }
         reset_video_status(0);
         break;
