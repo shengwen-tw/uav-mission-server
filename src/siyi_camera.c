@@ -10,6 +10,9 @@
 #include "config.h"
 #include "device.h"
 #include "siyi_camera.h"
+#include "util.h"
+
+#define SIYI_CAM(cam) ((struct siyi_cam_dev *) (cam)->gimbal_priv)
 
 #define SIYI_HEADER_SZ 8
 #define SIYI_CRC_SZ 2
@@ -19,7 +22,9 @@
 #define SIYI_GIMBAL_ROTATE_MSG_LEN (SIYI_HEADER_SZ + SIYI_CRC_SZ + 4)
 #define SIYI_GIMBAL_NEUTRAL_MSG_LEN (SIYI_HEADER_SZ + SIYI_CRC_SZ + 1)
 
-static int siyi_cam_fd;
+struct siyi_cam_dev {
+    int fd;
+};
 
 static const uint16_t crc16_tab[256] = {
     0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50A5, 0x60C6, 0x70E7, 0x8108,
@@ -95,9 +100,9 @@ static uint8_t *siyi_cam_pack_common(uint8_t *buf,
     return &buf[8];
 }
 
-void siyi_cam_manual_zoom(struct camera_dev *cam,
-                          uint8_t zoom_integer,
-                          uint8_t zoom_decimal)
+static void siyi_cam_manual_zoom(struct camera_dev *cam,
+                                 uint8_t zoom_integer,
+                                 uint8_t zoom_decimal)
 {
     uint8_t buf[SIYI_ZOOM_MSG_LEN] = {0};
     uint8_t *payload = siyi_cam_pack_common(buf, false, 2, 0, 0x0f);
@@ -113,12 +118,11 @@ void siyi_cam_manual_zoom(struct camera_dev *cam,
     memcpy(&payload[2], &crc16, sizeof(crc16));
 
     /* Send out the message */
-    send(siyi_cam_fd, buf, sizeof(buf), 0);
+    send(SIYI_CAM(cam)->fd, buf, sizeof(buf), 0);
 }
 
-void siyi_cam_gimbal_rotate_speed(struct camera_dev *cam,
-                                  int8_t yaw,
-                                  int8_t pitch)
+__attribute__((unused)) static void
+siyi_cam_gimbal_rotate_speed(struct camera_dev *cam, int8_t yaw, int8_t pitch)
 {
     uint8_t buf[SIYI_GIMBAL_ROTATE_SPEED_MSG_LEN] = {0};
     uint8_t *payload = siyi_cam_pack_common(buf, false, 2, 0, 0x07);
@@ -134,10 +138,12 @@ void siyi_cam_gimbal_rotate_speed(struct camera_dev *cam,
     memcpy(&payload[2], &crc16, sizeof(crc16));
 
     /* Send out the message */
-    send(siyi_cam_fd, buf, sizeof(buf), 0);
+    send(SIYI_CAM(cam)->fd, buf, sizeof(buf), 0);
 }
 
-void siyi_cam_gimbal_rotate(struct camera_dev *cam, int16_t yaw, int16_t pitch)
+static void siyi_cam_gimbal_rotate(struct camera_dev *cam,
+                                   int16_t yaw,
+                                   int16_t pitch)
 {
     uint8_t buf[SIYI_GIMBAL_ROTATE_MSG_LEN] = {0};
     uint8_t *payload = siyi_cam_pack_common(buf, false, 4, 0, 0x0e);
@@ -153,10 +159,10 @@ void siyi_cam_gimbal_rotate(struct camera_dev *cam, int16_t yaw, int16_t pitch)
     memcpy(&payload[4], &crc16, sizeof(crc16));
 
     /* Send out the message */
-    send(siyi_cam_fd, buf, sizeof(buf), 0);
+    send(SIYI_CAM(cam)->fd, buf, sizeof(buf), 0);
 }
 
-void siyi_cam_gimbal_centering(struct camera_dev *cam)
+static void siyi_cam_gimbal_centering(struct camera_dev *cam)
 {
     uint8_t buf[SIYI_GIMBAL_NEUTRAL_MSG_LEN] = {0};
     uint8_t *payload = siyi_cam_pack_common(buf, false, 1, 0, 0x08);
@@ -169,11 +175,13 @@ void siyi_cam_gimbal_centering(struct camera_dev *cam)
     memcpy(&payload[1], &crc16, sizeof(crc16));
 
     /* Send out the message */
-    send(siyi_cam_fd, buf, sizeof(buf), 0);
+    send(SIYI_CAM(cam)->fd, buf, sizeof(buf), 0);
 }
 
-void siyi_cam_open(struct camera_dev *cam)
+static void siyi_cam_open(struct camera_dev *cam)
 {
+    cam->gimbal_priv = malloc(sizeof(struct siyi_cam_dev));
+
     char *ip = "";
     get_config_param("siyi_camera_ip", &ip);
 
@@ -181,8 +189,8 @@ void siyi_cam_open(struct camera_dev *cam)
     get_config_param("siyi_camera_port", &port);
 
     /* Initialize UDP socket */
-    if ((siyi_cam_fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
-        printf("%s(): Failed to open the socket\n", __func__);
+    if ((SIYI_CAM(cam)->fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+        status("%s(): Failed to open the socket", __func__);
         exit(1);
     }
 
@@ -192,13 +200,19 @@ void siyi_cam_open(struct camera_dev *cam)
         .sin_addr.s_addr = inet_addr(ip),
         .sin_port = htons(port),
     };
-    if (connect(siyi_cam_fd, (struct sockaddr *) &siyi_cam_addr,
+    if (connect(SIYI_CAM(cam)->fd, (struct sockaddr *) &siyi_cam_addr,
                 sizeof(struct sockaddr)) == -1) {
-        printf("%s(): Failed to connect to the camera\n", __func__);
+        status("%s(): Failed to connect to the camera", __func__);
         exit(1);
     }
 
-    printf("SIYI camera connected.\n");
+    status("SIYI camera connected.");
+}
+
+static void siyi_cam_close(struct camera_dev *cam)
+{
+    close(SIYI_CAM(cam)->fd);
+    free(SIYI_CAM(cam));
 }
 
 static struct camera_operations siyi_cam_ops = {
@@ -206,7 +220,7 @@ static struct camera_operations siyi_cam_ops = {
     .camera_close = NULL,
     .camera_zoom = siyi_cam_manual_zoom,
     .gimbal_open = siyi_cam_open,
-    .gimbal_close = NULL,
+    .gimbal_close = siyi_cam_close,
     .gimbal_centering = siyi_cam_gimbal_centering,
     .gimbal_rotate = siyi_cam_gimbal_rotate,
 };

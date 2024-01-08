@@ -4,9 +4,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define CAMERA_PRIV(cam) cam->camera_priv
-#define GIMBAL_PRIV(cam) cam->gimbal_priv
-
 struct camera_dev;
 
 struct camera_operations {
@@ -27,7 +24,6 @@ struct camera_dev {
     struct camera_operations *camera_ops;
     void *camera_priv;
     void *gimbal_priv;
-    bool has_gimbal;
 };
 
 int register_camera(struct camera_operations *camera_ops);
