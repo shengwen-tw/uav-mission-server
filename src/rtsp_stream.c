@@ -90,7 +90,7 @@ static void pad_added_handler(GstElement *src, GstPad *pad, gst_data_t *data)
         printf("Failed to link pad and signal\n");
 }
 
-void generate_timestamp(char *timestamp)
+static void generate_timestamp(char *timestamp)
 {
     /* Size of the timestamp string:
      * 4 (year) + 2 (month) + 2 (day) + 2 (hour) + 2 (minute) +
@@ -143,7 +143,7 @@ static void on_new_sample_handler(GstElement *sink, gst_data_t *data)
     }
 }
 
-void rtsp_stream_save_image(struct camera_dev *cam)
+void rtsp_save_image(struct camera_dev *cam)
 {
     if (!data.camera_ready)
         return;
@@ -153,7 +153,7 @@ void rtsp_stream_save_image(struct camera_dev *cam)
     pthread_mutex_unlock(&data.snapshot_mtx);
 }
 
-void rtsp_stream_change_record_state(struct camera_dev *cam)
+void rtsp_change_record_state(struct camera_dev *cam)
 {
     if (!data.camera_ready)
         return;
@@ -198,7 +198,7 @@ void rtsp_stream_change_record_state(struct camera_dev *cam)
     data.recording = !data.recording;
 }
 
-void *rtsp_stream_saver(void *args)
+void *rtsp_saver(void *args)
 {
     char *codec = "";
     get_config_param("codec", &codec);

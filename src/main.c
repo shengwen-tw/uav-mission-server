@@ -63,7 +63,7 @@ void run_server(uart_server_args_t *uart_server_args)
     pthread_create(&mavlink_tx_tid, NULL, mavlink_tx_thread, NULL);
 
     pthread_t gstreamer_tid;
-    pthread_create(&gstreamer_tid, NULL, rtsp_stream_saver, NULL);
+    pthread_create(&gstreamer_tid, NULL, rtsp_saver, NULL);
 
     pthread_join(uart_server_tid, NULL);
     pthread_join(mavlink_tx_tid, NULL);

@@ -179,8 +179,8 @@ static void siyi_cam_close(struct camera_dev *cam)
 static struct camera_operations siyi_cam_ops = {
     .camera_open = NULL,
     .camera_close = NULL,
-    .camera_save_image = rtsp_stream_save_image,
-    .camera_change_record_state = rtsp_stream_change_record_state,
+    .camera_save_image = rtsp_save_image,
+    .camera_change_record_state = rtsp_change_record_state,
     .camera_zoom = siyi_cam_manual_zoom,
     .gimbal_open = siyi_cam_open,
     .gimbal_close = siyi_cam_close,

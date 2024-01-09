@@ -3,9 +3,9 @@
 
 #include "device.h"
 
-void rtsp_stream_save_image(struct camera_dev *);
-void rtsp_stream_change_record_state(struct camera_dev *cam);
-void rtsp_stream_terminate(void);
-void *rtsp_stream_saver(void *args);
+void rtsp_save_image(struct camera_dev *);
+void rtsp_change_record_state(struct camera_dev *cam);
+void rtsp_terminate(void);
+void *rtsp_saver(void *args);
 
 #endif
