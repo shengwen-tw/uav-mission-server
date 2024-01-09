@@ -62,18 +62,15 @@ void run_server(uart_server_args_t *uart_server_args)
     pthread_t mavlink_tx_tid;
     pthread_create(&mavlink_tx_tid, NULL, mavlink_tx_thread, NULL);
 
-    pthread_t gstreamer_tid;
-    pthread_create(&gstreamer_tid, NULL, rtsp_saver, NULL);
-
     pthread_join(uart_server_tid, NULL);
     pthread_join(mavlink_tx_tid, NULL);
-    pthread_join(gstreamer_tid, NULL);
 }
 
 static void device_init(void)
 {
     register_siyi_camera();
 
+    camera_open(0);
     gimbal_open(0);
     camera_zoom(0, 1, 0);
     gimbal_centering(0);

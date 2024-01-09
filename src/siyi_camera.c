@@ -138,6 +138,7 @@ static void siyi_cam_gimbal_centering(struct camera_dev *cam)
 static void siyi_cam_open(struct camera_dev *cam)
 {
     cam->gimbal_priv = malloc(sizeof(struct siyi_cam_dev));
+    memset(SIYI_CAM(cam), 0, sizeof(struct siyi_cam_dev));
     if (!cam->gimbal_priv) {
         status("%s(): Failed to allocate memory with malloc.", __func__);
         exit(1);
@@ -177,8 +178,8 @@ static void siyi_cam_close(struct camera_dev *cam)
 }
 
 static struct camera_operations siyi_cam_ops = {
-    .camera_open = NULL,
-    .camera_close = NULL,
+    .camera_open = rtsp_open,
+    .camera_close = rtsp_close,
     .camera_save_image = rtsp_save_image,
     .camera_change_record_state = rtsp_change_record_state,
     .camera_zoom = siyi_cam_manual_zoom,
