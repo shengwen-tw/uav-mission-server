@@ -70,8 +70,12 @@ static void device_init(void)
 {
     register_siyi_camera();
 
-    camera_open(0);
-    gimbal_open(0);
+    struct siyi_cam_config siyi_cam_config;
+    get_config_param("siyi_camera_ip", &siyi_cam_config.ip);
+    get_config_param("siyi_camera_port", &siyi_cam_config.port);
+
+    camera_open(0, NULL);
+    gimbal_open(0, (void *) &siyi_cam_config);
     camera_zoom(0, 1, 0);
     gimbal_centering(0);
 }

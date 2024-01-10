@@ -427,7 +427,7 @@ static void *rtsp_saver(void *args)
     return NULL;
 }
 
-void rtsp_open(struct camera_dev *cam)
+void rtsp_open(struct camera_dev *cam, void *args)
 {
     cam->camera_priv = malloc(sizeof(gst_data_t));
     memset(GST_DATA(cam), 0, sizeof(gst_data_t));

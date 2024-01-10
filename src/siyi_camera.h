@@ -12,6 +12,11 @@ enum {
     SIYI_CAM_FOCUS_STOP,
 };
 
+struct siyi_cam_config {
+    char *ip;
+    int port;
+};
+
 void register_siyi_camera(void);
 
 #endif

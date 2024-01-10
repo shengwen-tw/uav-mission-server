@@ -135,20 +135,16 @@ static void siyi_cam_gimbal_centering(struct camera_dev *cam)
     send(SIYI_CAM(cam)->fd, buf, sizeof(buf), 0);
 }
 
-static void siyi_cam_open(struct camera_dev *cam)
+static void siyi_cam_open(struct camera_dev *cam, void *args)
 {
+    struct siyi_cam_config *config = (struct siyi_cam_config *) args;
+
     cam->gimbal_priv = malloc(sizeof(struct siyi_cam_dev));
     memset(SIYI_CAM(cam), 0, sizeof(struct siyi_cam_dev));
     if (!cam->gimbal_priv) {
         status("%s(): Failed to allocate memory with malloc.", __func__);
         exit(1);
     }
-
-    char *ip = "";
-    get_config_param("siyi_camera_ip", &ip);
-
-    int port = 0;
-    get_config_param("siyi_camera_port", &port);
 
     /* Initialize UDP socket */
     if ((SIYI_CAM(cam)->fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
@@ -159,8 +155,8 @@ static void siyi_cam_open(struct camera_dev *cam)
     /* Connect to the camera */
     struct sockaddr_in siyi_cam_addr = {
         .sin_family = AF_INET,
-        .sin_addr.s_addr = inet_addr(ip),
-        .sin_port = htons(port),
+        .sin_addr.s_addr = inet_addr(config->ip),
+        .sin_port = htons(config->port),
     };
     if (connect(SIYI_CAM(cam)->fd, (struct sockaddr *) &siyi_cam_addr,
                 sizeof(struct sockaddr)) == -1) {
