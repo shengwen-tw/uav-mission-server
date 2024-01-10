@@ -85,7 +85,6 @@ int main(int argc, char const *argv[])
     /* clang-format off */
     struct option opts[] = {
         {"help", 0, NULL, 'h'},
-        {"device", 1, NULL, 'd'},
         {"serial-path", 1, NULL, 's'},
         {"serial-config", 1, NULL, 'b'},
         {"ip-port", 1, NULL, 'p'},
@@ -95,26 +94,18 @@ int main(int argc, char const *argv[])
     /* clang-format on */
 
     bool commander_mode = false;
-    char *device = NULL;
-    char *device_yaml = NULL;
     char *serial_path = NULL;
     char *serial_config = NULL;
     char *net_port = NULL;
     char *cmd_arg = NULL;
 
     int c, optidx = 0;
-    while ((c = getopt_long(argc, (char **) argv, "d:c:s:b:p:hrt", opts,
+    while ((c = getopt_long(argc, (char **) argv, "s:b:p:hrt", opts,
                             &optidx)) != -1) {
         switch (c) {
         case 'h':
             help(NULL);
             return 0;
-        case 'd':
-            device = optarg;
-            break;
-        case 'c':
-            device_yaml = optarg;
-            break;
         case 's':
             serial_path = optarg;
             break;
@@ -133,16 +124,6 @@ int main(int argc, char const *argv[])
         default:
             break;
         }
-    }
-
-    if (!commander_mode && !device) {
-        printf("Device name must be provided via -d option.\n");
-        exit(1);
-    }
-
-    if (!commander_mode && !device_yaml) {
-        printf("Device config file must be provided via -c option.\n");
-        exit(1);
     }
 
     if (!commander_mode && !serial_path) {
@@ -164,7 +145,7 @@ int main(int argc, char const *argv[])
     if (commander_mode) {
         run_commander(cmd_arg);
     } else {
-        load_configs(device_yaml, device);
+        load_devices_configs("configs/devices.yaml");
         load_rc_configs("configs/rc_config.yaml");
         device_init();
         run_server(&uart_server_args);

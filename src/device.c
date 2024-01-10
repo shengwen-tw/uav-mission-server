@@ -3,8 +3,6 @@
 #include "device.h"
 #include "util.h"
 
-#define CAMERA_NUM_MAX 6
-
 #define CAMERA_OPS(id) camera_devs[id].camera_ops
 
 static struct camera_dev camera_devs[CAMERA_NUM_MAX];

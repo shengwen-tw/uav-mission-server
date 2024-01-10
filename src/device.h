@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define CAMERA_NUM_MAX 6
+
 struct camera_dev;
 
 struct camera_operations {

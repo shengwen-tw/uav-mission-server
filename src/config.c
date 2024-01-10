@@ -1,8 +1,10 @@
+#include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <yaml.h>
 
 #include "config.h"
+#include "device.h"
 
 #define READ_PARAM_START(verbose) \
     do {                          \
@@ -69,6 +71,13 @@ static struct {
     config_siyi_t config_siyi;
 } config_list;
 
+struct device_config {
+    char *yaml;
+    char *type;
+    bool enabled;
+};
+
+static struct device_config devs[CAMERA_NUM_MAX];
 static config_rc_t rc_channels[18];
 
 static void yaml_load_param(yaml_parser_t *parser,
@@ -142,6 +151,71 @@ static void load_siyi_configs(char *yaml_path, config_siyi_t *config)
 
     fclose(file);
     yaml_parser_delete(&parser);
+}
+
+#define READ_DEVICE_CONFIG(dev_num)                           \
+    READ_PARAM(key, "device" #dev_num "_config", TYPE_STRING, \
+               &devs[dev_num].yaml)                           \
+    READ_PARAM(key, "device" #dev_num "_type", TYPE_STRING,   \
+               &devs[dev_num].type)                           \
+    READ_PARAM(key, "device" #dev_num "_enabled", TYPE_BOOL,  \
+               &devs[dev_num].enabled)
+
+void load_devices_configs(char *yaml_path)
+{
+    /* Open the yaml file */
+    FILE *file = fopen(yaml_path, "rb");
+    if (!file) {
+        fprintf(stderr, "Failed to open the YAML file.\n");
+        exit(1);
+    }
+
+    yaml_parser_t parser;
+    yaml_event_t event;
+    yaml_event_type_t event_type;
+
+    yaml_parser_initialize(&parser);
+    yaml_parser_set_input_file(&parser, file);
+
+    do {
+        if (!yaml_parser_parse(&parser, &event)) {
+            fprintf(stderr, "Failed to load configuration\n");
+            exit(1);
+        }
+
+        event_type = event.type;
+        yaml_char_t *key = event.data.scalar.value;
+
+        if (event_type == YAML_SCALAR_EVENT) {
+            READ_PARAM_START(false);
+            READ_DEVICE_CONFIG(0);
+            READ_DEVICE_CONFIG(1);
+            READ_DEVICE_CONFIG(2);
+            READ_DEVICE_CONFIG(3);
+            READ_DEVICE_CONFIG(4);
+            READ_DEVICE_CONFIG(5);
+            READ_PARAM_END();
+        }
+
+        yaml_event_delete(&event);
+    } while (event_type != YAML_STREAM_END_EVENT);
+
+    fclose(file);
+    yaml_parser_delete(&parser);
+
+    char path[PATH_MAX] = {0};
+    device_name = strdup(devs[0].type);  // XXX
+    for (int i = 0; i < CAMERA_NUM_MAX; i++) {
+        if (devs[i].enabled) {
+            if (strcmp("siyi", devs[i].type) == 0) {
+                sprintf(path, "configs/%s", devs[i].yaml);
+                load_siyi_configs(path, &config_list.config_siyi);
+            } else {
+                fprintf(stderr, "Unknown device `%s'\n", devs[0].type);
+                exit(0);
+            }
+        }
+    }
 }
 
 void load_configs(char *yaml_path, char *device)

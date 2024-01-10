@@ -65,7 +65,7 @@ $(BIN): $(OBJS)
 	$(Q)$(CC) -o $@ $^ $(LDFLAGS)
 
 test: $(BIN)
-	$(BIN) -d siyi -c configs/siyi_a8_mini.yaml -s /dev/ttyUSB0 -b 57600
+	$(BIN) -s /dev/ttyUSB0 -b 57600
 
 FORMAT_EXCLUDE := #-path ./dir1 -o -path ./dir2 
 FORMAT_FILES = ".*\.\(c\|h\)"

@@ -26,6 +26,7 @@ typedef struct {
 } config_rc_t;
 
 void load_configs(char *yaml_path, char *device);
+void load_devices_configs(char *yaml_path);
 void load_rc_configs(char *yaml_path);
 
 char *get_camera_vendor_name(void);

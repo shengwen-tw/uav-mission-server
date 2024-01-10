@@ -40,7 +40,7 @@ $ scripts/streaming-server.sh
 **Launch Mission Server:**
 
 ```shell
-$ build/mission-server -d device -c device_config_file -s serial_port -b config_str [-p tcp_port] [-r,--print-rc]
+$ build/mission-server -s serial_port -b config_str [-p tcp_port] [-r,--print-rc]
 ```
 
 **Command Sending (The server must be launched first):**

@@ -1,0 +1,24 @@
+device0_config: siyi_a8_mini.yaml
+device0_type: siyi
+device0_enabled: true
+
+device1_config: none 
+device1_type: none
+device1_enabled: false
+
+device2_config: none
+device2_type: none
+device2_enabled: false
+
+device3_config: none
+device3_type: none
+device3_enabled: false
+
+device4_config: none
+device4_type: none
+device4_enabled: false
+
+device5_config: none
+device5_type: none
+device5_enabled: false
+
