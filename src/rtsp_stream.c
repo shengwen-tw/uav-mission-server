@@ -8,10 +8,13 @@
 
 #include "config.h"
 #include "device.h"
+#include "rtsp_stream.h"
 
 #define GST_DATA(cam) ((gst_data_t *) cam->camera_priv)
 
 typedef struct {
+    struct rtsp_config *rtsp_config;
+
     int camera_id;
     bool recording;
     bool busy;
@@ -204,40 +207,26 @@ void rtsp_change_record_state(struct camera_dev *cam)
 static void *rtsp_saver(void *args)
 {
     gst_data_t *gst = (gst_data_t *) args;
+    struct rtsp_config *rtsp_config = gst->rtsp_config;
 
-    char *codec = "";
-    get_config_param("codec", &codec);
-
-    if (strcmp("h264", codec) && strcmp("h265", codec)) {
-        fprintf(stderr, "Invalid codec \"%s\"\n", codec);
+    if (strcmp("h264", rtsp_config->codec) &&
+        strcmp("h265", rtsp_config->codec)) {
+        fprintf(stderr, "Invalid codec \"%s\"\n", rtsp_config->codec);
         exit(1);
     }
 
     char depay[20];
     char parser[20];
     char decoder[20];
-    snprintf(depay, sizeof(depay), "rtp%sdepay", codec);
-    snprintf(parser, sizeof(parser), "%sparse", codec);
-    snprintf(decoder, sizeof(decoder), "avdec_%s", codec);
-
-    char *board_name = "";
-    get_config_param("board", &board_name);
+    snprintf(depay, sizeof(depay), "rtp%sdepay", rtsp_config->codec);
+    snprintf(parser, sizeof(parser), "%sparse", rtsp_config->codec);
+    snprintf(decoder, sizeof(decoder), "avdec_%s", rtsp_config->codec);
 
     bool rb5_codec = false;
-    if (strcmp("rb5", board_name) == 0) {
+    if (strcmp("rb5", rtsp_config->board_name) == 0) {
         rb5_codec = true;
         printf("Qualcomm RB5 acceleration enabled\n");
     }
-
-    char *rtsp_stream_url = "";
-    get_config_param("rtsp_stream_url", &rtsp_stream_url);
-
-    char *video_format = "";
-    get_config_param("video_format", &video_format);
-
-    int image_width = 0, image_height = 0;
-    get_config_param("image_width", &image_width);
-    get_config_param("image_height", &image_height);
 
     pthread_mutex_init(&gst->snapshot_mtx, NULL);
 
@@ -296,13 +285,13 @@ static void *rtsp_saver(void *args)
 
     /* clang-format off */
     GstCaps *caps =
-        gst_caps_new_simple(video_format,
-                            "width", G_TYPE_INT, image_width,
-                            "height", G_TYPE_INT, image_height,
+        gst_caps_new_simple(rtsp_config->video_format,
+                            "width", G_TYPE_INT, rtsp_config->image_width,
+                            "height", G_TYPE_INT, rtsp_config->image_height,
                             NULL);
 
     g_object_set(G_OBJECT(gst->source),
-                 "location", rtsp_stream_url,
+                 "location", rtsp_config->rtsp_stream_url,
                  "latency", 0,
                  NULL);
     /* clang-format on */
@@ -431,6 +420,9 @@ void rtsp_open(struct camera_dev *cam, void *args)
 {
     cam->camera_priv = malloc(sizeof(gst_data_t));
     memset(GST_DATA(cam), 0, sizeof(gst_data_t));
+    GST_DATA(cam)->rtsp_config = malloc(sizeof(struct rtsp_config));
+    memcpy(GST_DATA(cam)->rtsp_config, (struct rtsp_config *) args,
+           sizeof(struct rtsp_config));
     GST_DATA(cam)->camera_id = cam->id;
 
     pthread_t gstreamer_tid;
@@ -440,5 +432,6 @@ void rtsp_open(struct camera_dev *cam, void *args)
 
 void rtsp_close(struct camera_dev *cam)
 {
+    free(GST_DATA(cam)->rtsp_config);
     free(cam->camera_priv);
 }
