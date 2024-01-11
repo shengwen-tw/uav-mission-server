@@ -66,28 +66,6 @@ void run_server(uart_server_args_t *uart_server_args)
     pthread_join(mavlink_tx_tid, NULL);
 }
 
-static void device_init(void)
-{
-    register_siyi_camera();
-
-    struct siyi_cam_config siyi_cam_config;
-    get_config_param("siyi_camera_ip", &siyi_cam_config.ip);
-    get_config_param("siyi_camera_port", &siyi_cam_config.port);
-
-    struct rtsp_config rtsp_config;
-    get_config_param("codec", &rtsp_config.codec);
-    get_config_param("board", &rtsp_config.board_name);
-    get_config_param("rtsp_stream_url", &rtsp_config.rtsp_stream_url);
-    get_config_param("video_format", &rtsp_config.video_format);
-    get_config_param("image_width", &rtsp_config.image_width);
-    get_config_param("image_height", &rtsp_config.image_height);
-
-    camera_open(0, (void *) &rtsp_config);
-    gimbal_open(0, (void *) &siyi_cam_config);
-    camera_zoom(0, 1, 0);
-    gimbal_centering(0);
-}
-
 int main(int argc, char const *argv[])
 {
     /* clang-format off */
@@ -155,7 +133,6 @@ int main(int argc, char const *argv[])
     } else {
         load_devices_configs("configs/devices.yaml");
         load_rc_configs("configs/rc_config.yaml");
-        device_init();
         run_server(&uart_server_args);
     }
 

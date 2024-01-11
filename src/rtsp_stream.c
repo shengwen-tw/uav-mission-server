@@ -131,9 +131,8 @@ static void on_new_sample_handler(GstElement *sink, gst_data_t *data)
 
         /* Save JPEG file */
         char filename[PATH_MAX];
-        char *save_path;
-        get_config_param("save_path", &save_path);
-        snprintf(filename, sizeof(filename), "%s/%s.jpg", save_path, timestamp);
+        snprintf(filename, sizeof(filename), "%s/%s.jpg",
+                 data->rtsp_config->save_path, timestamp);
         FILE *file = fopen(filename, "wb");
 
         printf("[Camera %d] %s is saved!\n", data->camera_id, filename);
@@ -183,11 +182,9 @@ void rtsp_change_record_state(struct camera_dev *cam)
 
         /* Assign new file name */
         char timestamp[15] = {0};
-        char *save_path;
         generate_timestamp(timestamp);
-        get_config_param("save_path", &save_path);
-        sprintf(GST_DATA(cam)->mp4_file_name, "%s/%s.mp4", save_path,
-                timestamp);
+        sprintf(GST_DATA(cam)->mp4_file_name, "%s/%s.mp4",
+                GST_DATA(cam)->rtsp_config->save_path, timestamp);
         g_object_set(G_OBJECT(GST_DATA(cam)->mp4_sink), "location",
                      GST_DATA(cam)->mp4_file_name, NULL);
 

@@ -5,6 +5,8 @@
 
 #include "config.h"
 #include "device.h"
+#include "rtsp_stream.h"
+#include "siyi_camera.h"
 
 #define READ_PARAM_START(verbose) \
     do {                          \
@@ -62,14 +64,8 @@ static char *camera_model_list[] = {
     "A8-Mini",
 };
 
-static char *device_name;
-
 static int camera_vendor_idx = 0;
 static int camera_model_idx = 0;
-
-static struct {
-    config_siyi_t config_siyi;
-} config_list;
 
 struct device_config {
     char *yaml;
@@ -104,7 +100,9 @@ static void yaml_load_param(yaml_parser_t *parser,
         printf("%s: %s\n", key, value);
 }
 
-static void load_siyi_configs(char *yaml_path, config_siyi_t *config)
+static void load_siyi_configs(char *yaml_path,
+                              struct siyi_cam_config *siyi_cam_config,
+                              struct rtsp_config *rtsp_config)
 {
     /* Open the yaml file */
     FILE *file = fopen(yaml_path, "rb");
@@ -131,18 +129,20 @@ static void load_siyi_configs(char *yaml_path, config_siyi_t *config)
 
         if (event_type == YAML_SCALAR_EVENT) {
             READ_PARAM_START(true);
-            READ_PARAM(key, "save_path", TYPE_STRING, &config->save_path);
-            READ_PARAM(key, "board", TYPE_STRING, &config->board);
+            READ_PARAM(key, "save_path", TYPE_STRING, &rtsp_config->save_path);
+            READ_PARAM(key, "board", TYPE_STRING, &rtsp_config->board_name);
             READ_PARAM(key, "rtsp_stream_url", TYPE_STRING,
-                       &config->rtsp_stream_url);
-            READ_PARAM(key, "video_format", TYPE_STRING, &config->video_format);
-            READ_PARAM(key, "codec", TYPE_STRING, &config->codec);
-            READ_PARAM(key, "image_width", TYPE_INT, &config->image_width);
-            READ_PARAM(key, "image_height", TYPE_INT, &config->image_height);
+                       &rtsp_config->rtsp_stream_url);
+            READ_PARAM(key, "video_format", TYPE_STRING,
+                       &rtsp_config->video_format);
+            READ_PARAM(key, "codec", TYPE_STRING, &rtsp_config->codec);
+            READ_PARAM(key, "image_width", TYPE_INT, &rtsp_config->image_width);
+            READ_PARAM(key, "image_height", TYPE_INT,
+                       &rtsp_config->image_height);
             READ_PARAM(key, "siyi_camera_ip", TYPE_STRING,
-                       &config->siyi_camera_ip);
+                       &siyi_cam_config->ip);
             READ_PARAM(key, "siyi_camera_port", TYPE_INT,
-                       &config->siyi_camera_port);
+                       &siyi_cam_config->port);
             READ_PARAM_END();
         }
 
@@ -151,6 +151,22 @@ static void load_siyi_configs(char *yaml_path, config_siyi_t *config)
 
     fclose(file);
     yaml_parser_delete(&parser);
+}
+
+static void siyi_camera_init(int id)
+{
+    struct siyi_cam_config siyi_cam_config;
+    struct rtsp_config rtsp_config;
+
+    char path[PATH_MAX] = {0};
+    sprintf(path, "configs/%s", devs[id].yaml);
+    load_siyi_configs(path, &siyi_cam_config, &rtsp_config);
+
+    register_siyi_camera();
+    camera_open(id, (void *) &rtsp_config);
+    gimbal_open(id, (void *) &siyi_cam_config);
+    camera_zoom(id, 1, 0);
+    gimbal_centering(id);
 }
 
 #define READ_DEVICE_CONFIG(dev_num)                           \
@@ -203,30 +219,15 @@ void load_devices_configs(char *yaml_path)
     fclose(file);
     yaml_parser_delete(&parser);
 
-    char path[PATH_MAX] = {0};
-    device_name = strdup(devs[0].type);  // XXX
-    for (int i = 0; i < CAMERA_NUM_MAX; i++) {
-        if (devs[i].enabled) {
-            if (strcmp("siyi", devs[i].type) == 0) {
-                sprintf(path, "configs/%s", devs[i].yaml);
-                load_siyi_configs(path, &config_list.config_siyi);
+    for (int id = 0; id < CAMERA_NUM_MAX; id++) {
+        if (devs[id].enabled) {
+            if (strcmp("siyi", devs[id].type) == 0) {
+                siyi_camera_init(id);
             } else {
                 fprintf(stderr, "Unknown device `%s'\n", devs[0].type);
                 exit(0);
             }
         }
-    }
-}
-
-void load_configs(char *yaml_path, char *device)
-{
-    device_name = strdup(device);
-
-    if (strcmp("siyi", device) == 0) {
-        load_siyi_configs(yaml_path, &config_list.config_siyi);
-    } else {
-        fprintf(stderr, "Unknown device `%s'\n", device);
-        exit(0);
     }
 }
 
@@ -303,35 +304,6 @@ char *get_camera_vendor_name(void)
 char *get_camera_model_name(void)
 {
     return camera_model_list[camera_model_idx];
-}
-
-void get_config_param(char *name, void *retval)
-{
-    if (strcmp("siyi", device_name) == 0) {
-        config_siyi_t *config = &config_list.config_siyi;
-
-        if (strcmp("save_path", name) == 0) {
-            *(char **) retval = config->save_path;
-        } else if (strcmp("rtsp_stream_url", name) == 0) {
-            *(char **) retval = config->rtsp_stream_url;
-        } else if (strcmp("board", name) == 0) {
-            *(char **) retval = config->board;
-        } else if (strcmp("video_format", name) == 0) {
-            *(char **) retval = config->video_format;
-        } else if (strcmp("codec", name) == 0) {
-            *(char **) retval = config->codec;
-        } else if (strcmp("image_width", name) == 0) {
-            *(int *) retval = config->image_width;
-        } else if (strcmp("image_height", name) == 0) {
-            *(int *) retval = config->image_height;
-        } else if (strcmp("codec", name) == 0) {
-            *(char **) retval = config->codec;
-        } else if (strcmp("siyi_camera_ip", name) == 0) {
-            *(char **) retval = config->siyi_camera_ip;
-        } else if (strcmp("siyi_camera_port", name) == 0) {
-            *(int *) retval = config->siyi_camera_port;
-        }
-    }
 }
 
 void get_rc_config(int rc_channel, config_rc_t *config)

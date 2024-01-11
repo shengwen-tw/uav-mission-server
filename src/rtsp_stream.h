@@ -4,6 +4,7 @@
 #include "device.h"
 
 struct rtsp_config {
+    char *save_path;
     char *codec;
     char *board_name;
     char *rtsp_stream_url;
