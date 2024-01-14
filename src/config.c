@@ -223,6 +223,8 @@ void load_devices_configs(char *yaml_path)
         if (devs[id].enabled) {
             if (strcmp("siyi", devs[id].type) == 0) {
                 siyi_camera_init(id);
+            } else if (strcmp("none", devs[id].type) == 0) {
+                continue;
             } else {
                 fprintf(stderr, "Unknown device `%s'\n", devs[0].type);
                 exit(0);
