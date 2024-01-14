@@ -132,7 +132,7 @@ int main(int argc, char const *argv[])
         run_commander(cmd_arg);
     } else {
         load_devices_configs("configs/devices.yaml");
-        load_rc_configs("configs/rc_config.yaml");
+        load_rc_configs("configs/rc.yaml");
         run_server(&uart_server_args);
     }
 
