@@ -68,3 +68,19 @@ $ build/mission-server --send-tune track-number
     data bits you can simply pass `19200,,7` as the configuration string.
 
 * TCP Port -- The TCP to accept connections on (optional, the default is 8278).
+
+### Device configuration
+
+**Camera and Gimbal Configuration:**
+
+Currently, the `uav-mission-server` supports up to 6 camera-gimbal pairs defined in [devices.yaml](https://github.com/shengwen-tw/uav-mission-server/blob/master/configs/devices.yaml).
+
+A valid device setting includes a device type name, the configuration file corresponds with the device type, and should be enabled with `true`. For example:
+
+```yaml
+device0_config: devices/siyi_a8_mini.yaml
+device0_type: siyi
+device0_enabled: true
+```
+
+Different device types have distinguished configuration formats (Though currently, the `uav-mission-server` supports `siyi` as the sole type only). Explore the directory [config/devices/](https://github.com/shengwen-tw/uav-mission-server/tree/master/configs/devices) for more information.
