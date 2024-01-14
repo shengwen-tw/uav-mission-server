@@ -1,4 +1,4 @@
-device0_config: siyi_a8_mini.yaml
+device0_config: devices/siyi_a8_mini.yaml
 device0_type: siyi
 device0_enabled: true
 
