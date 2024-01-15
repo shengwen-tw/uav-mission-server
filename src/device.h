@@ -31,7 +31,7 @@ struct camera_dev {
     void *gimbal_priv;
 };
 
-int register_camera(struct camera_operations *camera_ops);
+int register_camera(int id, struct camera_operations *camera_ops);
 
 void camera_open(int id, void *args);
 void camera_close(int id);

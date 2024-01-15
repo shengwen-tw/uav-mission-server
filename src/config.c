@@ -162,7 +162,7 @@ static void siyi_camera_init(int id)
     sprintf(path, "configs/%s", devs[id].yaml);
     load_siyi_configs(path, &siyi_cam_config, &rtsp_config);
 
-    register_siyi_camera();
+    register_siyi_camera(id);
     camera_open(id, (void *) &rtsp_config);
     gimbal_open(id, (void *) &siyi_cam_config);
     camera_zoom(id, 1, 0);

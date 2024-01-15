@@ -6,7 +6,6 @@
 #define CAMERA_OPS(id) camera_devs[id].camera_ops
 
 static struct camera_dev camera_devs[CAMERA_NUM_MAX];
-static int camera_cnt;
 
 static inline bool device_present(int id)
 {
@@ -16,16 +15,15 @@ static inline bool device_present(int id)
         return false;
 }
 
-int register_camera(struct camera_operations *camera_ops)
+int register_camera(int id, struct camera_operations *camera_ops)
 {
-    if (camera_cnt >= CAMERA_NUM_MAX) {
-        status("Excedded maximal number of cameras");
+    if (id < 0 || id >= CAMERA_NUM_MAX) {
+        status("Invalid camera ID %d", id);
         exit(1);
     }
 
-    camera_devs[camera_cnt].id = camera_cnt;
-    camera_devs[camera_cnt].camera_ops = camera_ops;
-    camera_cnt++;
+    camera_devs[id].id = id;
+    camera_devs[id].camera_ops = camera_ops;
 
     return 0;
 }

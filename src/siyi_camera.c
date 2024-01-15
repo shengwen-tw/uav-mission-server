@@ -185,7 +185,7 @@ static struct camera_operations siyi_cam_ops = {
     .gimbal_rotate = siyi_cam_gimbal_rotate,
 };
 
-void register_siyi_camera(void)
+void register_siyi_camera(int id)
 {
-    register_camera(&siyi_cam_ops);
+    register_camera(id, &siyi_cam_ops);
 }

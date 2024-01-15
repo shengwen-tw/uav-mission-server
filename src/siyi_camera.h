@@ -17,6 +17,6 @@ struct siyi_cam_config {
     int port;
 };
 
-void register_siyi_camera(void);
+void register_siyi_camera(int id);
 
 #endif
