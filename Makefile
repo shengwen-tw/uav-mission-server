@@ -19,7 +19,7 @@ else ifeq ($(UNAME), FreeBSD)
   # FreeBSD (clang)
 endif
 
-CFLAGS += -O2 -Wall $(ASAN)
+CFLAGS += -O2 -Wall
 
 CFLAGS += -I lib/mavlink
 CFLAGS += -I lib/mavlink/common
@@ -62,7 +62,7 @@ $(OUT)/%.o: src/%.c lib/mavlink/common/mavlink.h
 
 $(BIN): $(OBJS)
 	$(VECHO) "  LD\t$@\n"
-	$(Q)$(CC) -o $@ $^ $(LDFLAGS)
+	$(Q)$(CC) -o $@ $^ $(ASAN) $(LDFLAGS)
 
 test: $(BIN)
 	$(BIN) -s /dev/ttyUSB0 -b 57600
