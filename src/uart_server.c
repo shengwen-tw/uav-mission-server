@@ -598,6 +598,7 @@ static void sig_handler(int sig)
         char b = '\0';
         write(g_close[1], &b, 1);
         delete_pidfile();
+        exit(0);
     } break;
     default:
         break;
