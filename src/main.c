@@ -80,24 +80,16 @@ int main(int argc, char const *argv[])
     /* clang-format on */
 
     bool commander_mode = false;
-    char *serial_path = NULL;
-    char *serial_config = NULL;
     char *net_port = NULL;
     char *cmd_arg = NULL;
 
     int c, optidx = 0;
-    while ((c = getopt_long(argc, (char **) argv, "s:b:p:hrt", opts,
-                            &optidx)) != -1) {
+    while ((c = getopt_long(argc, (char **) argv, "p:hrt", opts, &optidx)) !=
+           -1) {
         switch (c) {
         case 'h':
             help(NULL);
             return 0;
-        case 's':
-            serial_path = optarg;
-            break;
-        case 'b':
-            serial_config = optarg;
-            break;
         case 'p':
             net_port = optarg;
             break;
@@ -112,25 +104,14 @@ int main(int argc, char const *argv[])
         }
     }
 
-    if (!commander_mode && !serial_path) {
-        printf("Serial path must be provided via -s option.\n");
-        exit(1);
-    }
-
-    if (!commander_mode && !serial_config) {
-        printf("Serial config string must be provided via -b option.\n");
-        exit(1);
-    }
-
     uart_server_args_t uart_server_args = {
-        .serial_path = serial_path,
-        .serial_config = serial_config,
         .net_port = net_port,
     };
 
     if (commander_mode) {
         run_commander(cmd_arg);
     } else {
+        load_serial_configs("configs/serial.yaml");
         load_devices_configs("configs/devices.yaml");
         load_rc_configs("configs/rc.yaml");
         run_server(&uart_server_args);

@@ -2,8 +2,6 @@
 #define __UART_SERVER_H__
 
 typedef struct {
-    char *serial_path;
-    char *serial_config;
     char *net_port;
 } uart_server_args_t;
 

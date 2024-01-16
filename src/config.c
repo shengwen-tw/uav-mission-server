@@ -6,6 +6,7 @@
 #include "config.h"
 #include "device.h"
 #include "rtsp_stream.h"
+#include "serial.h"
 #include "siyi_camera.h"
 
 #define READ_PARAM_START(verbose) \
@@ -67,12 +68,21 @@ static char *camera_model_list[] = {
 static int camera_vendor_idx = 0;
 static int camera_model_idx = 0;
 
+struct serial_config {
+    char *port;
+    int baudrate;
+    int parity;
+    int data_bits;
+    int stop_bits;
+};
+
 struct device_config {
     char *yaml;
     char *type;
     bool enabled;
 };
 
+static struct serial_config serial_cfg;
 static struct device_config devs[CAMERA_NUM_MAX];
 static config_rc_t rc_channels[18];
 
@@ -167,6 +177,86 @@ static void siyi_camera_init(int id)
     gimbal_open(id, (void *) &siyi_cam_config);
     camera_zoom(id, 1, 0);
     gimbal_centering(id);
+}
+
+void load_serial_configs(char *yaml_path)
+{
+    char *stop_bits = "";
+    char *parity = "";
+
+    /* Open the yaml file */
+    FILE *file = fopen(yaml_path, "rb");
+    if (!file) {
+        fprintf(stderr, "Failed to open the YAML file.\n");
+        exit(1);
+    }
+
+    yaml_parser_t parser;
+    yaml_event_t event;
+    yaml_event_type_t event_type;
+
+    yaml_parser_initialize(&parser);
+    yaml_parser_set_input_file(&parser, file);
+
+    do {
+        if (!yaml_parser_parse(&parser, &event)) {
+            fprintf(stderr, "Failed to load configuration\n");
+            exit(1);
+        }
+
+        event_type = event.type;
+        yaml_char_t *key = event.data.scalar.value;
+
+        if (event_type == YAML_SCALAR_EVENT) {
+            READ_PARAM_START(true);
+            READ_PARAM(key, "port", TYPE_STRING, &serial_cfg.port);
+            READ_PARAM(key, "baudrate", TYPE_INT, &serial_cfg.baudrate);
+            READ_PARAM(key, "parity", TYPE_STRING, &parity);
+            READ_PARAM(key, "data-bits", TYPE_INT, &serial_cfg.data_bits);
+            READ_PARAM(key, "stop-bits", TYPE_STRING, &stop_bits);
+            READ_PARAM_END();
+        }
+
+        yaml_event_delete(&event);
+    } while (event_type != YAML_STREAM_END_EVENT);
+
+    fclose(file);
+    yaml_parser_delete(&parser);
+
+    if (strcmp("N", parity) == 0) {
+        serial_cfg.parity = e_parity_none;
+    } else if (strcmp("O", parity) == 0) {
+        serial_cfg.parity = e_parity_odd;
+    } else if (strcmp("E", parity) == 0) {
+        serial_cfg.parity = e_parity_even;
+    } else if (strcmp("M", parity) == 0) {
+        serial_cfg.parity = e_parity_mark;
+    } else if (strcmp("S", parity) == 0) {
+        serial_cfg.parity = e_parity_space;
+    } else {
+        fprintf(stderr,
+                "Parity configuration must be either empty or one of N, "
+                "O, E, M, or S");
+        exit(1);
+    }
+
+    if (serial_cfg.data_bits < 5 || serial_cfg.data_bits > 8) {
+        fprintf(stderr,
+                "Data bits must be either empty or one of 5, 6, 7, or 8");
+        exit(1);
+    }
+
+    if (strcmp(stop_bits, "1.5") == 0) {
+        serial_cfg.stop_bits = e_stop_bits_one_half;
+    } else if (strcmp(stop_bits, "1") == 0) {
+        serial_cfg.stop_bits = e_stop_bits_one;
+    } else if (strcmp(stop_bits, "2") == 0) {
+        serial_cfg.stop_bits = e_stop_bits_two;
+    } else {
+        fprintf(stderr,
+                "Stop bits must be either empty or one of 1, 1.5, "
+                "or 2");
+    }
 }
 
 #define READ_DEVICE_CONFIG(dev_num)                           \
@@ -306,6 +396,15 @@ char *get_camera_vendor_name(void)
 char *get_camera_model_name(void)
 {
     return camera_model_list[camera_model_idx];
+}
+
+void get_serial_port_config(char **port_name, struct SerialConfig *config)
+{
+    *port_name = serial_cfg.port;
+    config->baudrate = serial_cfg.baudrate;
+    config->parity = serial_cfg.parity;
+    config->data_bits = serial_cfg.data_bits;
+    config->stop_bits = serial_cfg.stop_bits;
 }
 
 void get_rc_config(int rc_channel, config_rc_t *config)

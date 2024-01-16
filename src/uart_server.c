@@ -129,143 +129,6 @@ static bool get_unsigned(const char *s, size_t len, unsigned *o_result)
 }
 
 /**
- * A utility function that parses a serial configuration string.
- *
- * @param config_str
- * @param o_config
- *
- * @return
- */
-static const char *parse_serial_config(const char *config_str,
-                                       struct SerialConfig *o_config)
-{
-    int cfg_idx = 0;
-    const char *start = config_str;
-
-    if ((!config_str) || (!o_config))
-        return "Internal program error";
-
-    /* Initialise with default values */
-    o_config->parity = SERIAL_CFG_DEFAULT_PARITY;
-    o_config->data_bits = SERIAL_CFG_DEFAULT_DATA_BITS;
-    o_config->stop_bits = SERIAL_CFG_DEFAULT_STOP_BITS;
-
-    /* Parse config elements */
-    do {
-        const char *next, *end;
-
-        /* Trim start */
-        while (isspace(*start)) {
-            ++start;
-        }
-
-        next = strchr(start, ',');
-
-        if (!next)
-            next = start + strlen(start);
-
-        end = next;
-
-        /* Trim end */
-        while ((end > start) && (isspace(end[-1])))
-            --end;
-
-        /* Parse specific config elements */
-        switch (cfg_idx) {
-        case SERIAL_CFG_BAUDRATE_IDX:
-            if ((!get_unsigned(start, end - start, &o_config->baudrate)) ||
-                (!o_config->baudrate)) {
-                return "baud rate must be a positive integer";
-            }
-
-            break;
-
-        case SERIAL_CFG_PARITY_IDX:
-            if (end - start == 1) {
-                switch (*start) {
-                case 'N':
-                    o_config->parity = e_parity_none;
-                    break;
-
-                case 'O':
-                    o_config->parity = e_parity_odd;
-                    break;
-
-                case 'E':
-                    o_config->parity = e_parity_even;
-                    break;
-
-                case 'M':
-                    o_config->parity = e_parity_mark;
-                    break;
-
-                case 'S':
-                    o_config->parity = e_parity_space;
-                    break;
-
-                default:
-                    /* Increment end to reach the error condition below */
-                    ++end;
-                    break;
-                }
-            }
-
-            if (end - start > 1) {
-                return "Parity configuration must be either empty or one of N, "
-                       "O, E, M, or S";
-            }
-
-            break;
-
-        case SERIAL_CFG_DATA_BITS_IDX:
-            if (end - start == 1) {
-                switch (*start) {
-                case '5':
-                case '6':
-                case '7':
-                case '8':
-                    o_config->data_bits = *start - '0';
-                    break;
-
-                default:
-                    /* Increment end to reach the error condition below */
-                    ++end;
-                    break;
-                }
-            }
-
-            if (end - start > 1)
-                return "Data bits must be either empty or one of 5, 6, 7, or 8";
-            break;
-
-        case SERIAL_CFG_STOP_BITS_IDX:
-            if (end - start > 0) {
-                if (memcmp("1.5", start, IMAX(3, end - start)) == 0) {
-                    o_config->stop_bits = e_stop_bits_one_half;
-                } else if (memcmp("1", start, IMAX(1, end - start)) == 0) {
-                    o_config->stop_bits = e_stop_bits_one;
-                } else if (memcmp("2", start, IMAX(1, end - start)) == 0) {
-                    o_config->stop_bits = e_stop_bits_two;
-                } else {
-                    return "Stop bits must be either empty or one of 1, 1.5, "
-                           "or 2";
-                }
-            }
-
-            break;
-
-        default:
-            return "Invalid serial port configuration string";
-        }
-
-        ++cfg_idx;
-        start = next + 1;
-    } while (start[-1]);
-
-    return NULL;
-}
-
-/**
  * A utility function that converts a parity enumeration value to a human
  * readable string.
  */
@@ -395,35 +258,7 @@ void help(const char *s, ...)
         va_end(args);
     }
 
-    fputs("usage: mission-server [-h] serial_port config_str [tcp_port]\n",
-          stderr);
-
-    /* Print only brief usage info if an error message was provided */
-    if (!s) {
-        fputs("\nUART TCP Server\n\n", stderr);
-        fputs("positional arguments:\n", stderr);
-        fputs("  serial_port  The serial port to serve\n", stderr);
-        fputs(
-            "  config_str   The configuration of the serial port: "
-            "baudrate[,parity[,data_bits[,stop_bits]]]\n",
-            stderr);
-        fputs(
-            "                 baudrate    The baud rate to be used for the "
-            "communication\n",
-            stderr);
-        fprintf(stderr,
-                "                 parity      N, O, E, M, or S (for None, Odd, "
-                "Even, Mark, or Space) [%c]\n",
-                parity_to_string(SERIAL_CFG_DEFAULT_PARITY)[0]);
-        fprintf(stderr, "                 data_bits   5, 6, 7, or 8 [%d]\n",
-                SERIAL_CFG_DEFAULT_DATA_BITS);
-        fprintf(stderr, "                 stop_bits   1, 1.5, or 2 [%s]\n",
-                stop_bits_to_string(SERIAL_CFG_DEFAULT_STOP_BITS));
-        fprintf(stderr, "  tcp_port     The port to serve on [%d]\n\n",
-                DEFAULT_PORT);
-        fputs("optional arguments:\n", stderr);
-        fputs("  -h, --help   show this help message and exit\n", stderr);
-    }
+    fputs("usage: mission-server [tcp_port]\n", stderr);
 }
 
 /* Global state variables */
@@ -631,8 +466,7 @@ void *run_uart_server(void *args)
 {
     /* Load UART server arguments */
     uart_server_args_t *uart_server_args = (uart_server_args_t *) args;
-    char *serial_path = uart_server_args->serial_path;
-    char *serial_config = uart_server_args->serial_config;
+    char *serial_path;
     char *net_port = uart_server_args->net_port;
 
     int ret_val = EXIT_FAILURE;
@@ -640,11 +474,7 @@ void *run_uart_server(void *args)
     unsigned port = DEFAULT_PORT;
     struct SerialConfig cfg;
 
-    const char *parse_err = parse_serial_config(serial_config, &cfg);
-    if (parse_err) {
-        help(parse_err);
-        exit(ret_val);
-    }
+    get_serial_port_config(&serial_path, &cfg);
 
     /* Parse the TCP port if provided */
     if (net_port) {
