@@ -40,7 +40,7 @@ $ scripts/streaming-server.sh
 **Launch Mission Server:**
 
 ```shell
-$ build/mission-server -s serial_port -b config_str [-p tcp_port] [-r,--print-rc]
+$ build/mission-server [-p tcp_port] [-r,--print-rc]
 ```
 
 **Command Sending (The server must be launched first):**
@@ -53,25 +53,30 @@ $ build/mission-server --send-tune track-number
 
 ### Arguments
 
-* Serial Port -- The name of the serial port to use (e.g. `/dev/ttyS0` on UNIX).
-
-* Serial Port Configuration -- A string specifying how to configure the serial port. The format of
-    the serial port configuration string is `baudrate[,parity[,data-bits[,stop-bits]]]`.
-
-    * **baudrate** - The baud rate to use, e.g. 115200 (required)
-    * **parity** - N for none, O for odd, E for even, M for mark, S for space (optional, default is N)
-    * **data-bits** - 5, 6, 7, or 8 (optional, default is 8)
-    * **stop-bits** - 1, 1.5, or 2 (optional, default is 1)
-
-    Optional parameters can be omitted entirely if they're at the end, or left empty if you want to use
-    the default and specify a parameter after them. For example, to configure a baud rate of 19200 with 7
-    data bits you can simply pass `19200,,7` as the configuration string.
-
 * TCP Port -- The TCP to accept connections on (optional, the default is 8278).
 
-### Device configuration
+## Configuration
 
-**Camera and Gimbal Configuration:**
+### Serial Port Configuration
+
+The serial port can be configured via [serial.yaml](https://github.com/shengwen-tw/uav-mission-server/blob/master/configs/serial.yaml), where the default settings are given as follows:
+
+```yaml
+port: /dev/ttyUSB0
+baudrate: 57600
+parity: N
+data-bits: 8
+stop-bits: 1
+```
+Note that:
+
+* `port` is the name of the serial port to use (e.g., `/dev/ttyS0` on UNIX).
+* `baudrate` is the baud rate to use, e.g., 115200.
+* `parity` can be N for none, O for odd, E for even, M for mark, or S for space.
+* `data-bits` can be 5, 6, 7, or 8.
+* `stop-bits` can be 1, 1.5, or 2.
+
+### Camera and Gimbal Configuration
 
 Currently, the `uav-mission-server` supports up to 6 camera-gimbal pairs defined in [devices.yaml](https://github.com/shengwen-tw/uav-mission-server/blob/master/configs/devices.yaml).
 
