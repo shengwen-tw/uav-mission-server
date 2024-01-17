@@ -65,7 +65,7 @@ $(BIN): $(OBJS)
 	$(Q)$(CC) -o $@ $^ $(ASAN) $(LDFLAGS)
 
 test: $(BIN)
-	$(BIN) -s /dev/ttyUSB0 -b 57600
+	$(BIN)
 
 FORMAT_EXCLUDE := #-path ./dir1 -o -path ./dir2 
 FORMAT_FILES = ".*\.\(c\|h\)"
